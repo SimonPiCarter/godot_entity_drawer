@@ -139,7 +139,7 @@ namespace godot
 				handler_l.count_type = DirectionHandler::NONE;
 			}
 
-			if((handler_l.count > 5
+			if((handler_l.count > 15
 			&& handler_l.count_type != DirectionHandler::NONE
 			&& handler_l.count_type != handler_l.type))
 			{
