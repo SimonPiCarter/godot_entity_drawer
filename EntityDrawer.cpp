@@ -325,7 +325,7 @@ namespace godot
 				// if still enabled
 				if(instance_l.enabled)
 				{
-					Vector2 diff_l = _oldPos[i] - _newPos[i];
+					Vector2 diff_l = _newPos[i] - _oldPos[i];
 					Vector2 pos_l =  _oldPos[i] + diff_l * std::min<real_t>(1., real_t(_elapsedTime/_timeStep));
 					// draw animaton
 					Ref<Texture2D> texture_l = instance_l.animation->get_frame_texture(cur_anim_l, instance_l.frame_idx);
