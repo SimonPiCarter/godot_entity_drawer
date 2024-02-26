@@ -16,9 +16,7 @@ namespace godot
 	}
 
 	void EntityDrawer::_ready()
-	{
-		set_y_sort_enabled(true);
-	}
+	{}
 
 	int EntityDrawer::add_instance(Vector2 const &pos_p, Vector2 const &offset_p, Ref<SpriteFrames> const & animation_p,
 		StringName const &current_animation_p, StringName const &next_animation_p, bool one_shot_p)
