@@ -92,7 +92,7 @@ namespace godot
 			int new_type = DirectionHandler::NONE;
 			if(dir_l.length_squared() < 0.1)
 			{
-				dir_l = _oldPos[handler_l.instance] - _newPos[handler_l.instance];
+				dir_l = _newPos[handler_l.instance] - _oldPos[handler_l.instance];
 			}
 			if(std::abs(dir_l.x) > 0.01 || std::abs(dir_l.y) > 0.01)
 			{
