@@ -82,7 +82,11 @@ public:
 	Ref<ShaderMaterial> get_shader_material(int idx_p);
 
 	TypedArray<int> indexes_from_texture(Rect2i const &rect_p, Ref<Texture2D> const &texture_p) const;
+	TypedArray<bool> index_array_from_texture(Rect2i const &rect_p, Ref<Texture2D> const &texture_p) const;
 	int index_from_texture(Vector2i const &pos_p, Ref<Texture2D> const &texture_p) const;
+
+	void set_shader_bool_params(String const &param_p, TypedArray<bool> const &values_p);
+	void set_shader_bool_params_from_indexes(String const &param_p, TypedArray<int> const &indexes_p, bool value_indexes_p, bool value_others_p);
 
 	void update_pos();
 	std::vector<Vector2> & getNewPos();

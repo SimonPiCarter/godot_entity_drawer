@@ -336,7 +336,27 @@ namespace godot
 	TypedArray<int> EntityDrawer::indexes_from_texture(Rect2i const &rect_p, Ref<Texture2D> const &texture_p) const
 	{
 		Ref<Image> image_l = texture_p->get_image();
-		std::vector<bool> all_added_l(_instances.size(), false);
+		TypedArray<bool> all_added_l = index_array_from_texture(rect_p, texture_p);
+
+		TypedArray<int> indexes_l;
+		int idx_l = 0;
+		for(int idx_l = 0 ; idx_l < all_added_l.size() ; ++ idx_l)
+		{
+			if (all_added_l[idx_l])
+			{
+				indexes_l.append(idx_l);
+			}
+		}
+
+		return indexes_l;
+	}
+
+	TypedArray<bool> EntityDrawer::index_array_from_texture(Rect2i const &rect_p, Ref<Texture2D> const &texture_p) const
+	{
+		Ref<Image> image_l = texture_p->get_image();
+		TypedArray<bool> all_added_l;
+		all_added_l.resize(_instances.size());
+		all_added_l.fill(false);
 		for(int32_t x = rect_p.get_position().x ; x <= rect_p.get_position().x + rect_p.get_size().x ; ++ x)
 		{
 			for(int32_t y = rect_p.get_position().y ; y <= rect_p.get_position().y + rect_p.get_size().y ; ++ y)
@@ -348,24 +368,44 @@ namespace godot
 				}
 			}
 		}
-
-		TypedArray<int> indexes_l;
-		int idx_l = 0;
-		for(bool added_l : all_added_l)
-		{
-			if (added_l)
-			{
-				indexes_l.append(idx_l);
-			}
-			++idx_l;
-		}
-
-		return indexes_l;
+		return all_added_l;
 	}
 
 	int EntityDrawer::index_from_texture(Vector2i const &pos_p, Ref<Texture2D> const &texture_p) const
 	{
 		return idx_from_color(safe_color(pos_p.x, pos_p.y, texture_p->get_image()));
+	}
+
+	void EntityDrawer::set_shader_bool_params(String const &param_p, TypedArray<bool> const &values_p)
+	{
+		for(size_t i = 0 ; i < values_p.size() && i < _instances.size() ; ++ i)
+		{
+			if(_instances[i]._material.is_valid())
+			{
+				_instances[i]._material->set_shader_parameter(param_p, values_p[i]);
+			}
+		}
+	}
+
+	void EntityDrawer::set_shader_bool_params_from_indexes(String const &param_p, TypedArray<int> const &indexes_p, bool value_indexes_p, bool value_others_p)
+	{
+		// set all default values
+		for(size_t i = 0 ; i < _instances.size() ; ++ i)
+		{
+			if(_instances[i]._material.is_valid())
+			{
+				_instances[i]._material->set_shader_parameter(param_p, value_others_p);
+			}
+		}
+		// set for indexes
+		for(size_t i = 0 ; i < indexes_p.size() ; ++ i)
+		{
+			int idx_l = indexes_p[i];
+			if(idx_l < _instances.size() && _instances[idx_l]._material.is_valid())
+			{
+				_instances[idx_l]._material->set_shader_parameter(param_p, value_indexes_p);
+			}
+		}
 	}
 
 	void EntityDrawer::_process(double delta_p)
@@ -456,12 +496,15 @@ namespace godot
 		ClassDB::bind_method(D_METHOD("set_new_pos", "instance", "pos"), &EntityDrawer::set_new_pos);
 		ClassDB::bind_method(D_METHOD("get_old_pos", "instance"), &EntityDrawer::get_old_pos);
 		ClassDB::bind_method(D_METHOD("get_shader_material", "instance"), &EntityDrawer::get_shader_material);
+		ClassDB::bind_method(D_METHOD("set_shader_bool_params", "param", "values"), &EntityDrawer::set_shader_bool_params);
+		ClassDB::bind_method(D_METHOD("set_shader_bool_params_from_indexes", "param", "indexes", "value_index", "value_other"), &EntityDrawer::set_shader_bool_params_from_indexes);
 		ClassDB::bind_method(D_METHOD("set_shader", "material"), &EntityDrawer::set_shader);
 		ClassDB::bind_method(D_METHOD("set_alt_viewport", "alt_viewport"), &EntityDrawer::set_alt_viewport);
 
 		ClassDB::bind_method(D_METHOD("set_time_step", "time_step"), &EntityDrawer::set_time_step);
 
 		ClassDB::bind_method(D_METHOD("indexes_from_texture", "rect", "texture"), &EntityDrawer::indexes_from_texture);
+		ClassDB::bind_method(D_METHOD("index_array_from_texture", "rect", "texture"), &EntityDrawer::index_array_from_texture);
 		ClassDB::bind_method(D_METHOD("index_from_texture", "pos", "texture"), &EntityDrawer::index_from_texture);
 
 		ADD_GROUP("EntityDrawer", "EntityDrawer_");
