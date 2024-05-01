@@ -424,10 +424,11 @@ namespace godot
 			if(instance_l.enabled && instance_l.animation.is_valid() && instance_l.animation->get_frame_count(cur_anim_l) > 0)
 			{
 				double frameTime_l = instance_l.animation->get_frame_duration(cur_anim_l, instance_l.frame_idx) / instance_l.animation->get_animation_speed(cur_anim_l) ;
-				double nextFrameTime_l = instance_l.start + instance_l.frame_idx * frameTime_l;
+				double nextFrameTime_l = instance_l.start + frameTime_l;
 				if(_elapsedAllTime >= nextFrameTime_l)
 				{
 					++instance_l.frame_idx;
+					instance_l.start = _elapsedAllTime;
 				}
 				if(instance_l.frame_idx >= instance_l.animation->get_frame_count(cur_anim_l))
 				{
@@ -453,7 +454,6 @@ namespace godot
 						init_handler(instance_l, _directionHandlers);
 					}
 					instance_l.frame_idx = 0;
-					instance_l.start = _elapsedAllTime;
 				}
 				// if still enabled
 				if(instance_l.enabled)
