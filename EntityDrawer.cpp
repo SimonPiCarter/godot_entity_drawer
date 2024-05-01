@@ -116,13 +116,6 @@ namespace godot
 			return int(idx_l);
 		}
 
-		// std::sort(_instances.begin(), _instances.end(),
-		// 	[](EntityInstance const & a, EntityInstance const & b)
-		// 	{
-		// 		return a.position.y < b.position.y;
-		// 	}
-		// );
-
 	}
 
 	void EntityDrawer::update_pos()
