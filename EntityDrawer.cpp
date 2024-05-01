@@ -34,6 +34,7 @@ namespace godot
 			instance_l._material->set_shader(_shader);
 
 			RenderingServer::get_singleton()->canvas_item_set_parent(instance_l._canvas, get_canvas_item());
+			RenderingServer::get_singleton()->canvas_item_set_default_texture_filter(instance_l._canvas, RenderingServer::CANVAS_ITEM_TEXTURE_FILTER_NEAREST);
 			RenderingServer::get_singleton()->canvas_item_set_material(instance_l._canvas, instance_l._material->get_rid());
 
 			return int(_instances.size()-1);
