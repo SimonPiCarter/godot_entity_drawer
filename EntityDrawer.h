@@ -49,7 +49,11 @@ struct DirectionHandler
 	int type = -1;
 
 	char count = 0;
+	char count_idle = 0;
 	int count_type = -1;
+
+	// moving or idle
+	bool idle = false;
 
 	int instance = 0;
 
@@ -130,6 +134,8 @@ private:
 	/// differently (used for mouse picking)
 	Node2D *_alt_viewport = nullptr;
 	Ref<Shader> _alt_shader;
+
+	double const _scale = 1.;
 };
 
 }

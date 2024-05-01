@@ -174,6 +174,8 @@ namespace godot
 			}
 			if(new_type != DirectionHandler::NONE)
 			{
+				handler_l.count_idle = 0;
+				handler_l.idle = false;
 				if(new_type != handler_l.count_type)
 				{
 					handler_l.count = 0;
@@ -186,21 +188,33 @@ namespace godot
 			}
 			else
 			{
+				++handler_l.count_idle;
 				handler_l.count = 0;
 				handler_l.count_type = DirectionHandler::NONE;
 			}
 
-			if((handler_l.count > 15
+			if(handler_l.count > 15
 			&& handler_l.count_type != DirectionHandler::NONE
-			&& handler_l.count_type != handler_l.type))
+			&& handler_l.count_type != handler_l.type)
 			{
 				handler_l.type = handler_l.count_type;
+			}
+			if(handler_l.count_idle > 15)
+			{
+				handler_l.idle = true;
 			}
 			++i;
 		}
 	}
 
-	StringName const & get_anim(EntityInstance const &instance_p, DirectionHandler const &handler_p)
+	StringName name_from_dir(int dir_p, StringName const &name_p)
+	{
+		if(DirectionHandler::UP == dir_p) { return  StringName("up_"+name_p); }
+		if(DirectionHandler::DOWN == dir_p) { return  StringName("down_"+name_p); }
+		if(DirectionHandler::LEFT == dir_p) { return  StringName("left_"+name_p); }
+		if(DirectionHandler::RIGHT == dir_p) { return  StringName("right_"+name_p); }
+		return name_p;
+	}
 	{
 		if(handler_p.type < 0)
 		{
@@ -230,10 +244,10 @@ namespace godot
 			return;
 		}
 		handler_l.base_name = instance_p.current_animation;
-		handler_l.names[DirectionHandler::UP] = StringName("up_"+instance_p.current_animation);
-		handler_l.names[DirectionHandler::DOWN] = StringName("down_"+instance_p.current_animation);
-		handler_l.names[DirectionHandler::LEFT] = StringName("left_"+instance_p.current_animation);
-		handler_l.names[DirectionHandler::RIGHT] = StringName("right_"+instance_p.current_animation);
+		handler_l.names[DirectionHandler::UP] = name_from_dir(DirectionHandler::UP, instance_p.current_animation);
+		handler_l.names[DirectionHandler::DOWN] = name_from_dir(DirectionHandler::DOWN, instance_p.current_animation);
+		handler_l.names[DirectionHandler::LEFT] = name_from_dir(DirectionHandler::LEFT, instance_p.current_animation);
+		handler_l.names[DirectionHandler::RIGHT] = name_from_dir(DirectionHandler::RIGHT, instance_p.current_animation);
 		handler_l.direction = Vector2(0,0);
 	}
 
@@ -459,7 +473,7 @@ namespace godot
 				if(instance_l.enabled)
 				{
 					Vector2 diff_l = _newPos[i] - _oldPos[i];
-					Vector2 pos_l =  _oldPos[i] + diff_l * std::min<real_t>(1., real_t(_elapsedTime/_timeStep));
+					Vector2 pos_l =  (_oldPos[i] + diff_l * std::min<real_t>(1., real_t(_elapsedTime/_timeStep))) * _scale;
 					// draw animaton
 					Ref<Texture2D> texture_l = instance_l.animation->get_frame_texture(cur_anim_l, instance_l.frame_idx);
 					RenderingServer::get_singleton()->canvas_item_set_transform(instance_l._canvas, Transform2D(0., pos_l));
