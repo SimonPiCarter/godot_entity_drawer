@@ -3,8 +3,8 @@
 #include <godot_cpp/godot.hpp>
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/classes/atlas_texture.hpp>
-#include <godot_cpp/classes/sprite_frames.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
+#include <godot_cpp/classes/sprite_frames.hpp>
 
 #include <array>
 
@@ -29,7 +29,10 @@ struct EntityInstance
 
 	// GODOT RID used for efficient display
 	RID _canvas;
+	// rid used for alternate rendering
+	RID _alt_canvas;
 	Ref<ShaderMaterial> _material;
+	Ref<ShaderMaterial> _alt_material;
 };
 
 struct DirectionHandler
@@ -77,6 +80,9 @@ public:
 	void set_new_pos(int idx_p, Vector2 const &pos_p);
 	Vector2 const & get_old_pos(int idx_p);
 
+	TypedArray<int> indexes_from_texture(Rect2i const &rect_p, Ref<Texture2D> const &texture_p) const;
+	int index_from_texture(Vector2i const &pos_p, Ref<Texture2D> const &texture_p) const;
+
 	void update_pos();
 	std::vector<Vector2> & getNewPos();
 	std::vector<EntityInstance> &getInstances() { return _instances; }
@@ -92,6 +98,7 @@ public:
 
 	void set_time_step(double timeStep_p) { _timeStep = timeStep_p; }
 	void set_shader(Ref<Shader> const &shader_p) { _shader = shader_p; }
+	void set_alt_viewport(Node2D *alt_viewport_p) { _alt_viewport = alt_viewport_p; }
 
 private:
 	Ref<Shader> _shader;
@@ -113,6 +120,10 @@ private:
 
 	/// @brief time since last position update
 	double _elapsedTime = 0.;
+
+	/// @brief an alternative rendering layer used to redner the entities
+	/// differently (used for mouse picking)
+	Node2D *_alt_viewport = nullptr;
 };
 
 }
