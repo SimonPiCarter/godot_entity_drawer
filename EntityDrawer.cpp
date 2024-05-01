@@ -7,6 +7,37 @@
 
 namespace godot
 {
+	Vector3 color_from_idx(int idx_p)
+	{
+		// Compute the color based on the idx
+		int r = idx_p % 256;
+		int g = (idx_p/ 256 ) % 256;
+		int b = (idx_p/ (256*256) ) % 256;
+		return Vector3(r/255.,g/255.,b/255.);
+	}
+
+	int idx_from_color(Color const &color_p)
+	{
+		int r = int(color_p.r * 255);
+		int g = int(color_p.g * 255);
+		int b = int(color_p.b * 255);
+		if(r != 255 || g != 255 || b != 255)
+		{
+			return r + g *256 + b *256*256;
+		}
+		return -1;
+	}
+
+	Color safe_color(int x, int y, Ref<Image> const &image_p)
+	{
+		if(x >= 0 && x < image_p->get_width()
+		&& y >= 0 && y < image_p->get_height())
+		{
+			return image_p->get_pixel(x, y);
+		}
+		return Color(1.f,1.f,1.f,1.f);
+	}
+
 	EntityDrawer::~EntityDrawer()
 	{
 		for(EntityInstance &instance_l : _instances)
@@ -16,7 +47,21 @@ namespace godot
 	}
 
 	void EntityDrawer::_ready()
-	{}
+	{
+		// Custom shader to display a color per idx
+		_alt_shader = Ref<Shader>(memnew(Shader));
+		_alt_shader->set_code("\n\
+			shader_type canvas_item;\n\
+			\n\
+			uniform vec3 idx_color : source_color = vec3(1.0);\n\
+			\n\
+			void fragment() {\n\
+				COLOR.rgb = idx_color;\n\
+				COLOR.a = round(COLOR.a);\n\
+			}\n\
+			"
+		);
+	}
 
 	int EntityDrawer::add_instance(Vector2 const &pos_p, Vector2 const &offset_p, Ref<SpriteFrames> const & animation_p,
 		StringName const &current_animation_p, StringName const &next_animation_p, bool one_shot_p)
@@ -42,27 +87,7 @@ namespace godot
 			{
 				instance_l._alt_canvas = RenderingServer::get_singleton()->canvas_item_create();
 
-				// Custom shader to display a color per idx
-				Ref<Shader> shader_l(memnew(Shader));
-				shader_l->set_code("\n\
-					shader_type canvas_item;\n\
-					\n\
-					uniform vec3 idx_color : source_color = vec3(1.0);\n\
-					\n\
-					void fragment() {\n\
-						COLOR.rgb = idx_color;\n\
-					}\n\
-					"
-				);
-
 				instance_l._alt_material = Ref<ShaderMaterial>(memnew(ShaderMaterial));
-				instance_l._alt_material->set_shader(shader_l);
-				// Compute the color based on the idx
-				int idx_l = int(_instances.size()-1);
-				int r = idx_l % 256;
-				int g = (idx_l/ 256 ) % 256;
-				int b = (idx_l/ (256*256) ) % 256;
-				Vector3 color_l(r/256.,g/256.,b/256.);
 				instance_l._alt_material->set_shader_parameter("idx_color", color_l);
 
 				RenderingServer::get_singleton()->canvas_item_set_parent(instance_l._alt_canvas, _alt_viewport->get_canvas_item());
@@ -309,26 +334,9 @@ namespace godot
 		return _oldPos[idx_p];
 	}
 
-	int idx_from_color(Color const &color_p)
+	Ref<ShaderMaterial> EntityDrawer::get_shader_material(int idx_p)
 	{
-		int r = int((color_p.r+1e-5) * 256);
-		int g = int((color_p.g+1e-5) * 256);
-		int b = int((color_p.b+1e-5) * 256);
-		if(r != 256 || g != 256 || b != 256)
-		{
-			return r + g *256 + b *256*256;
-		}
-		return -1;
-	}
-
-	Color safe_color(int x, int y, Ref<Image> const &image_p)
-	{
-		if(x >= 0 && x < image_p->get_width()
-		&& y >= 0 && y < image_p->get_height())
-		{
-			return image_p->get_pixel(x, y);
-		}
-		return Color(1.f,1.f,1.f,1.f);
+		return _instances[idx_p]._material;
 	}
 
 	TypedArray<int> EntityDrawer::indexes_from_texture(Rect2i const &rect_p, Ref<Texture2D> const &texture_p) const
@@ -427,13 +435,13 @@ namespace godot
 					if(texture_l.is_valid())
 					{
 						texture_l->draw(instance_l._canvas, instance_l.offset);
-					}
-					// alternate rendering
-					if(instance_l._alt_canvas.is_valid())
-					{
-						RenderingServer::get_singleton()->canvas_item_set_transform(instance_l._alt_canvas, Transform2D(0., pos_l));
-						RenderingServer::get_singleton()->canvas_item_clear(instance_l._alt_canvas);
-						texture_l->draw(instance_l._alt_canvas, instance_l.offset);
+						// alternate rendering
+						if(instance_l._alt_canvas.is_valid())
+						{
+							RenderingServer::get_singleton()->canvas_item_set_transform(instance_l._alt_canvas, Transform2D(0., pos_l));
+							RenderingServer::get_singleton()->canvas_item_clear(instance_l._alt_canvas);
+							texture_l->draw(instance_l._alt_canvas, instance_l.offset);
+						}
 					}
 				}
 			}
@@ -453,6 +461,7 @@ namespace godot
 		ClassDB::bind_method(D_METHOD("remove_direction_handler", "instance"), &EntityDrawer::remove_direction_handler);
 		ClassDB::bind_method(D_METHOD("set_new_pos", "instance", "pos"), &EntityDrawer::set_new_pos);
 		ClassDB::bind_method(D_METHOD("get_old_pos", "instance"), &EntityDrawer::get_old_pos);
+		ClassDB::bind_method(D_METHOD("get_shader_material", "instance"), &EntityDrawer::get_shader_material);
 		ClassDB::bind_method(D_METHOD("set_shader", "material"), &EntityDrawer::set_shader);
 		ClassDB::bind_method(D_METHOD("set_alt_viewport", "alt_viewport"), &EntityDrawer::set_alt_viewport);
 

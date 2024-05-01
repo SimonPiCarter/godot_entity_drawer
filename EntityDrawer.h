@@ -79,6 +79,7 @@ public:
 	void remove_direction_handler(int idx_p);
 	void set_new_pos(int idx_p, Vector2 const &pos_p);
 	Vector2 const & get_old_pos(int idx_p);
+	Ref<ShaderMaterial> get_shader_material(int idx_p);
 
 	TypedArray<int> indexes_from_texture(Rect2i const &rect_p, Ref<Texture2D> const &texture_p) const;
 	int index_from_texture(Vector2i const &pos_p, Ref<Texture2D> const &texture_p) const;
@@ -124,6 +125,7 @@ private:
 	/// @brief an alternative rendering layer used to redner the entities
 	/// differently (used for mouse picking)
 	Node2D *_alt_viewport = nullptr;
+	Ref<Shader> _alt_shader;
 };
 
 }
