@@ -88,7 +88,8 @@ namespace godot
 				instance_l._alt_canvas = RenderingServer::get_singleton()->canvas_item_create();
 
 				instance_l._alt_material = Ref<ShaderMaterial>(memnew(ShaderMaterial));
-				instance_l._alt_material->set_shader_parameter("idx_color", color_l);
+				instance_l._alt_material->set_shader(_alt_shader);
+				instance_l._alt_material->set_shader_parameter("idx_color", color_from_idx(_instances.size()-1));
 
 				RenderingServer::get_singleton()->canvas_item_set_parent(instance_l._alt_canvas, _alt_viewport->get_canvas_item());
 				RenderingServer::get_singleton()->canvas_item_set_default_texture_filter(instance_l._alt_canvas, RenderingServer::CANVAS_ITEM_TEXTURE_FILTER_NEAREST);
