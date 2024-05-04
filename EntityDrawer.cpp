@@ -215,15 +215,21 @@ namespace godot
 		if(DirectionHandler::RIGHT == dir_p) { return  StringName("right_"+name_p); }
 		return name_p;
 	}
+
+	StringName get_anim(EntityInstance const &instance_p, DirectionHandler const &handler_p)
 	{
 		if(handler_p.type < 0)
 		{
-			return handler_p.names[2];
+			return handler_p.names[DirectionHandler::LEFT];
+		}
+		if(handler_p.idle && handler_p.base_name == StringName("run"))
+		{
+			return name_from_dir(handler_p.type, "idle");
 		}
 		return handler_p.names[handler_p.type];
 	}
 
-	StringName const & get_anim(EntityInstance const &instance_p, std::vector<DirectionHandler> const &directionHandlers_p)
+	StringName get_anim(EntityInstance const &instance_p, std::vector<DirectionHandler> const &directionHandlers_p)
 	{
 		if(instance_p.handler < 0)
 		{
