@@ -137,6 +137,8 @@ namespace godot
 		// free all components that cannot be inherited
 		if(instance_l.animation.is_valid())
 		{
+			if(instance_l.animation.get().info.rid.is_valid())
+				RenderingServer::get_singleton()->canvas_item_clear(instance_l.animation.get().info.rid);
 			animations.free_instance(instance_l.animation);
 		}
 		if(instance_l.dir_animation.is_valid())
@@ -149,6 +151,8 @@ namespace godot
 		}
 		if(instance_l.alt_info.is_valid())
 		{
+			if(instance_l.alt_info.get().rid.is_valid())
+				RenderingServer::get_singleton()->canvas_item_clear(instance_l.alt_info.get().rid);
 			alt_infos.free_instance(instance_l.alt_info);
 		}
 
@@ -180,6 +184,8 @@ namespace godot
 			/// @todo also clear position
 			dir_handlers.free_instance(instance_l.dir_handler);
 		}
+
+		_instances.free_instance(idx_p);
 	}
 
 	void EntityDrawer::set_direction(int idx_p, Vector2 const &direction_p)
