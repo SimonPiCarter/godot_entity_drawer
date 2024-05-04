@@ -296,16 +296,18 @@ namespace godot
 		{
 			return;
 		}
+		/// IMPORTANT this has to be done before next_animation = next_animation_p because
+		/// current_animation_p is a reference to old next_animation therefore updating it break
+		/// the value
+		if(instance_l.dir_animation.is_valid())
+		{
+			init_animation(instance_l.dir_animation.get(), current_animation_p);
+		}
 		instance_l.animation.get().current_animation = current_animation_p;
 		instance_l.animation.get().next_animation = next_animation_p;
 		instance_l.animation.get().frame_idx = 0;
 		instance_l.animation.get().start = _elapsedAllTime;
 		instance_l.animation.get().one_shot = false;
-
-		if(instance_l.dir_animation.is_valid())
-		{
-			init_animation(instance_l.dir_animation.get(), current_animation_p);
-		}
 	}
 
 	void EntityDrawer::set_animation_one_shot(int idx_p, StringName const &current_animation_p)
@@ -466,12 +468,17 @@ namespace godot
 			return instance_p.animation.get().current_animation;
 		}
 		DirectionHandler const &handler_l = instance_p.dir_handler.get();
+		int type_l = handler_l.type;
+		if(type_l == DirectionHandler::NONE)
+		{
+			type_l = DirectionHandler::LEFT;
+		}
 
 		// forced directionl anim
 		if(instance_p.dir_animation.is_valid()
 		&& instance_p.dir_animation.get().base_name != StringName(""))
 		{
-			return instance_p.dir_animation.get().names[handler_l.type];
+			return instance_p.dir_animation.get().names[type_l];
 		}
 
 		if(instance_p.dyn_animation.is_valid()
@@ -479,9 +486,9 @@ namespace godot
 		{
 			if(handler_l.idle)
 			{
-				return instance_p.dyn_animation.get().idle.names[handler_l.type];
+				return instance_p.dyn_animation.get().idle.names[type_l];
 			}
-			return instance_p.dyn_animation.get().moving.names[handler_l.type];
+			return instance_p.dyn_animation.get().moving.names[type_l];
 		}
 		return instance_p.animation.get().current_animation;
 	}
@@ -490,6 +497,7 @@ namespace godot
 	{
 		_instances.for_each([&](EntityInstance &instance_p, size_t idx_p) {
 			StringName const & cur_anim_l = get_anim(instance_p);
+			std::string test_l(cur_anim_l.substr(0,-1).utf8().get_data());
 			if(!instance_p.animation.is_valid())
 			{
 				return;
@@ -512,7 +520,7 @@ namespace godot
 						free_instance(idx_p);
 						is_over_l = true;
 					}
-					else if(!animation_l.next_animation.is_empty())
+					else if(animation_l.next_animation != StringName(""))
 					{
 						set_animation(idx_p, animation_l.next_animation, StringName(""));
 					}

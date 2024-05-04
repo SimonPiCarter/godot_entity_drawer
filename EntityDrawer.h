@@ -29,7 +29,7 @@ struct AnimationInstance
 	StringName current_animation;
 	StringName next_animation;
 	/// @brief will be destroyed after the end of the animation
-	bool one_shot = true;
+	bool one_shot = false;
 
 	RenderingInfo info;
 };
