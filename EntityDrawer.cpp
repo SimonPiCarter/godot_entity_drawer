@@ -40,171 +40,156 @@ namespace godot
 
 	EntityDrawer::~EntityDrawer()
 	{
-		for(EntityInstance &instance_l : _instances)
-		{
-			RenderingServer::get_singleton()->free_rid(instance_l._canvas);
-		}
+		_instances.for_each([&](EntityInstance &, size_t idx_p) {
+			free_instance(idx_p);
+		});
 	}
 
-	void EntityDrawer::_ready()
+	// helper for animation
+	void set_up_animation(smart_list_handle<AnimationInstance> &handle_p,
+		double elapsed_time_p, Ref<Shader> const &shader_p, RID const &parent_p,
+		Vector2 const &offset_p, Ref<SpriteFrames> const & animation_p,
+		StringName const &current_animation_p, StringName const &next_animation_p, bool one_shot_p)
 	{
-		// Custom shader to display a color per idx
-		_alt_shader = Ref<Shader>(memnew(Shader));
-		_alt_shader->set_code("\n\
-			shader_type canvas_item;\n\
-			\n\
-			uniform vec3 idx_color : source_color = vec3(1.0);\n\
-			\n\
-			void fragment() {\n\
-				COLOR.rgb = idx_color;\n\
-				COLOR.a = round(COLOR.a);\n\
-			}\n\
-			"
-		);
+		AnimationInstance &animation_l = handle_p.get();
+		animation_l.offset = offset_p;
+		animation_l.animation = animation_p;
+		animation_l.start = elapsed_time_p;
+		animation_l.frame_idx = 0;
+		animation_l.current_animation = current_animation_p;
+		animation_l.next_animation = next_animation_p;
+		animation_l.one_shot = one_shot_p;
+
+		// if fresh new animation we set it up
+		if(handle_p.revision() == 0)
+		{
+			// set up resources
+			animation_l.info.rid = RenderingServer::get_singleton()->canvas_item_create();
+			animation_l.info.material = Ref<ShaderMaterial>(memnew(ShaderMaterial));
+			animation_l.info.material->set_shader(shader_p);
+
+			RenderingServer::get_singleton()->canvas_item_set_parent(animation_l.info.rid, parent_p);
+			RenderingServer::get_singleton()->canvas_item_set_default_texture_filter(animation_l.info.rid, RenderingServer::CANVAS_ITEM_TEXTURE_FILTER_NEAREST);
+			RenderingServer::get_singleton()->canvas_item_set_material(animation_l.info.rid, animation_l.info.material->get_rid());
+		}
 	}
 
 	int EntityDrawer::add_instance(Vector2 const &pos_p, Vector2 const &offset_p, Ref<SpriteFrames> const & animation_p,
 		StringName const &current_animation_p, StringName const &next_animation_p, bool one_shot_p)
 	{
-		if(_freeIdx.empty())
+		EntityInstance entity_l;
+
+		// animation
+		entity_l.animation = animations.recycle_instance();
+		set_up_animation(entity_l.animation, _elapsedAllTime, _shader, get_canvas_item(), offset_p, animation_p, current_animation_p, next_animation_p, one_shot_p);
+
+		// register instance
+		smart_list_handle<EntityInstance> handle_l = _instances.new_instance(entity_l);
+
+		// position
+		handle_l.get().pos_idx = handle_l.handle();
+		if(handle_l.get().pos_idx < _newPos.size()
+		&& handle_l.get().pos_idx < _oldPos.size())
 		{
-			_instances.push_back({offset_p, animation_p, true, _elapsedTime, 0, current_animation_p, next_animation_p, one_shot_p});
-			_newPos.push_back(pos_p);
-			_oldPos.push_back(pos_p);
-
-			// set up resources
-			EntityInstance &instance_l = _instances.back();
-			instance_l._canvas = RenderingServer::get_singleton()->canvas_item_create();
-			instance_l._material = Ref<ShaderMaterial>(memnew(ShaderMaterial));
-			instance_l._material->set_shader(_shader);
-			//instance_l._material->set_shader_parameter("uni_enabled", true);
-
-			RenderingServer::get_singleton()->canvas_item_set_parent(instance_l._canvas, get_canvas_item());
-			RenderingServer::get_singleton()->canvas_item_set_default_texture_filter(instance_l._canvas, RenderingServer::CANVAS_ITEM_TEXTURE_FILTER_NEAREST);
-			RenderingServer::get_singleton()->canvas_item_set_material(instance_l._canvas, instance_l._material->get_rid());
-
-			if(_alt_viewport)
-			{
-				instance_l._alt_canvas = RenderingServer::get_singleton()->canvas_item_create();
-
-				instance_l._alt_material = Ref<ShaderMaterial>(memnew(ShaderMaterial));
-				instance_l._alt_material->set_shader(_alt_shader);
-				instance_l._alt_material->set_shader_parameter("idx_color", color_from_idx(_instances.size()-1));
-
-				RenderingServer::get_singleton()->canvas_item_set_parent(instance_l._alt_canvas, _alt_viewport->get_canvas_item());
-				RenderingServer::get_singleton()->canvas_item_set_default_texture_filter(instance_l._alt_canvas, RenderingServer::CANVAS_ITEM_TEXTURE_FILTER_NEAREST);
-				RenderingServer::get_singleton()->canvas_item_set_material(instance_l._alt_canvas, instance_l._alt_material->get_rid());
-			}
-
-			return int(_instances.size()-1);
+			_newPos[handle_l.get().pos_idx] = pos_p;
+			_oldPos[handle_l.get().pos_idx] = pos_p;
 		}
 		else
 		{
-			size_t idx_l = _freeIdx.front();
-			_freeIdx.pop_front();
-			_instances[idx_l].offset = offset_p;
-			_instances[idx_l].animation = animation_p;
-			_instances[idx_l].enabled = true;
-			_instances[idx_l].start = _elapsedTime;
-			_instances[idx_l].frame_idx = 0;
-			_instances[idx_l].current_animation = current_animation_p;
-			_instances[idx_l].next_animation = next_animation_p;
-			_instances[idx_l].one_shot = one_shot_p;
-			_instances[idx_l].handler = -1;
-			_newPos[idx_l] = pos_p;
-			_oldPos[idx_l] = pos_p;
-
-			return int(idx_l);
+			_newPos.push_back(pos_p);
+			_oldPos.push_back(pos_p);
 		}
 
+		return int(handle_l.handle());
 	}
 
-	void EntityDrawer::update_pos()
+	int EntityDrawer::add_sub_instance(int idx_ref_p, Vector2 const &offset_p, Ref<SpriteFrames> const & animation_p,
+					StringName const &current_animation_p, StringName const &next_animation_p, bool one_shot_p)
 	{
-		_elapsedTime = 0.;
-		// swap positions
-		std::swap(_oldPos, _newPos);
-	}
-
-	std::vector<Vector2> & EntityDrawer::getNewPos()
-	{
-		return _newPos;
-	}
-
-	void EntityDrawer::_physics_process(double delta_p)
-	{
-		size_t i = 0;
-		for(DirectionHandler &handler_l : _directionHandlers)
+		if(!_instances.is_valid(idx_ref_p))
 		{
-			if(!handler_l.enabled)
-			{
-				++i;
-				continue;
-			}
-			Vector2 dir_l = handler_l.direction;
-			int new_type = DirectionHandler::NONE;
-			if(dir_l.length_squared() < 0.1)
-			{
-				dir_l = _newPos[handler_l.instance] - _oldPos[handler_l.instance];
-			}
-			if(std::abs(dir_l.x) > 0.01 || std::abs(dir_l.y) > 0.01)
-			{
-				if(std::abs(dir_l.x) > std::abs(dir_l.y) || !handler_l.has_up_down)
-				{
-					if(dir_l.x > 0)
-					{
-						new_type = DirectionHandler::RIGHT;
-					}
-					else
-					{
-						new_type = DirectionHandler::LEFT;
-					}
-				}
-				else
-				{
-					if(dir_l.y > 0)
-					{
-						new_type = DirectionHandler::DOWN;
-					}
-					else
-					{
-						new_type = DirectionHandler::UP;
-					}
-				}
-			}
-			if(new_type != DirectionHandler::NONE)
-			{
-				handler_l.count_idle = 0;
-				handler_l.idle = false;
-				if(new_type != handler_l.count_type)
-				{
-					handler_l.count = 0;
-					handler_l.count_type = new_type;
-				}
-				if(handler_l.count < 100)
-				{
-					++handler_l.count;
-				}
-			}
-			else
-			{
-				++handler_l.count_idle;
-				handler_l.count = 0;
-				handler_l.count_type = DirectionHandler::NONE;
-			}
-
-			if(handler_l.count > 15
-			&& handler_l.count_type != DirectionHandler::NONE
-			&& handler_l.count_type != handler_l.type)
-			{
-				handler_l.type = handler_l.count_type;
-			}
-			if(handler_l.count_idle > 15)
-			{
-				handler_l.idle = true;
-			}
-			++i;
+			return -1;
 		}
+		EntityInstance entity_l;
+
+		// animation
+		entity_l.animation = animations.recycle_instance();
+		set_up_animation(entity_l.animation, _elapsedTime, _shader, get_canvas_item(), offset_p, animation_p, current_animation_p, next_animation_p, one_shot_p);
+
+		// copy reference for position and dir_handler
+		entity_l.pos_idx = _instances.get(idx_ref_p).pos_idx;
+		entity_l.dir_handler = _instances.get(idx_ref_p).dir_handler;
+		entity_l.main_instance = _instances.get_handle(idx_ref_p);
+
+		// register instance
+		smart_list_handle<EntityInstance> handle_l = _instances.new_instance(entity_l);
+
+		// set up relation for main instance
+		entity_l.main_instance.get().sub_instances.push_back(handle_l);
+
+		return int(handle_l.handle());
+	}
+
+	void EntityDrawer::free_instance(int idx_p)
+	{
+		EntityInstance &instance_l = _instances.get(idx_p);
+
+		// free all components that cannot be inherited
+		if(instance_l.animation.is_valid())
+		{
+			animations.free_instance(instance_l.animation);
+		}
+		if(instance_l.dir_animation.is_valid())
+		{
+			dir_animations.free_instance(instance_l.dir_animation);
+		}
+		if(instance_l.dyn_animation.is_valid())
+		{
+			dyn_animations.free_instance(instance_l.dyn_animation);
+		}
+		if(instance_l.alt_info.is_valid())
+		{
+			alt_infos.free_instance(instance_l.alt_info);
+		}
+
+		for(smart_list_handle<EntityInstance> subs_l : instance_l.sub_instances)
+		{
+			if(subs_l.is_valid())
+			{
+				free_instance(subs_l.handle());
+			}
+		}
+
+		// if we are a sub instance we release ourself from our main
+		if(instance_l.main_instance.is_valid())
+		{
+			std::list<smart_list_handle<EntityInstance> > & sub_instances_l = instance_l.main_instance.get().sub_instances;
+			// remove itself
+			for(auto it_l = sub_instances_l.begin() ; it_l != sub_instances_l.end() ; ++it_l )
+			{
+				if(it_l->handle() == idx_p)
+				{
+					sub_instances_l.erase(it_l);
+					break;
+				}
+			}
+		}
+		// else we can clear the direction handler
+		else
+		{
+			/// @todo also clear position
+			dir_handlers.free_instance(instance_l.dir_handler);
+		}
+	}
+
+	void EntityDrawer::set_direction(int idx_p, Vector2 const &direction_p)
+	{
+		EntityInstance &instance_l = _instances.get(idx_p);
+		if(!instance_l.dir_handler.is_valid())
+		{
+			return;
+		}
+		instance_l.dir_handler.get().direction = direction_p;
 	}
 
 	StringName name_from_dir(int dir_p, StringName const &name_p)
@@ -216,126 +201,140 @@ namespace godot
 		return name_p;
 	}
 
-	StringName get_anim(EntityInstance const &instance_p, DirectionHandler const &handler_p)
+	void init_animation(DirectionalAnimation &anim_p, StringName const &base_anim_p)
 	{
-		if(handler_p.type < 0)
-		{
-			return handler_p.names[DirectionHandler::LEFT];
-		}
-		if(handler_p.idle && handler_p.base_name == StringName("run"))
-		{
-			return name_from_dir(handler_p.type, "idle");
-		}
-		return handler_p.names[handler_p.type];
-	}
-
-	StringName get_anim(EntityInstance const &instance_p, std::vector<DirectionHandler> const &directionHandlers_p)
-	{
-		if(instance_p.handler < 0)
-		{
-			return instance_p.current_animation;
-		}
-		return get_anim(instance_p, directionHandlers_p[instance_p.handler]);
-	}
-
-	void init_handler(EntityInstance const &instance_p, std::vector<DirectionHandler> &directionHandlers_p)
-	{
-		if(instance_p.handler < 0)
-		{
-			return;
-		}
-		DirectionHandler &handler_l = directionHandlers_p[instance_p.handler];
-		if(handler_l.base_name == instance_p.current_animation)
-		{
-			return;
-		}
-		handler_l.base_name = instance_p.current_animation;
-		handler_l.names[DirectionHandler::UP] = name_from_dir(DirectionHandler::UP, instance_p.current_animation);
-		handler_l.names[DirectionHandler::DOWN] = name_from_dir(DirectionHandler::DOWN, instance_p.current_animation);
-		handler_l.names[DirectionHandler::LEFT] = name_from_dir(DirectionHandler::LEFT, instance_p.current_animation);
-		handler_l.names[DirectionHandler::RIGHT] = name_from_dir(DirectionHandler::RIGHT, instance_p.current_animation);
-		handler_l.direction = Vector2(0,0);
-	}
-
-	StringName const & EntityDrawer::get_animation(int idx_p) const
-	{
-		EntityInstance const &instance_l = _instances[idx_p];
-		return instance_l.current_animation;
-	}
-
-	void EntityDrawer::set_animation(int idx_p, StringName const &current_animation_p, StringName const &next_animation_p)
-	{
-		EntityInstance &instance_l = _instances[idx_p];
-
-		instance_l.current_animation = current_animation_p;
-		instance_l.next_animation = next_animation_p;
-		instance_l.frame_idx = 0;
-		instance_l.start = _elapsedAllTime;
-		instance_l.one_shot = false;
-
-		init_handler(instance_l, _directionHandlers);
-	}
-
-	void EntityDrawer::set_animation_one_shot(int idx_p, StringName const &current_animation_p)
-	{
-		EntityInstance &instance_l = _instances[idx_p];
-
-		instance_l.current_animation = current_animation_p;
-		instance_l.frame_idx = 0;
-		instance_l.start = _elapsedAllTime;
-		instance_l.one_shot = true;
-
-		init_handler(instance_l, _directionHandlers);
-	}
-
-	void EntityDrawer::set_direction(int idx_p, Vector2 const &direction_p)
-	{
-		EntityInstance &instance_l = _instances[idx_p];
-		if(instance_l.handler < 0)
-		{
-			return;
-		}
-		_directionHandlers[instance_l.handler].direction = direction_p;
+		anim_p.base_name = base_anim_p;
+		anim_p.names[DirectionHandler::UP] = name_from_dir(DirectionHandler::UP, base_anim_p);
+		anim_p.names[DirectionHandler::DOWN] = name_from_dir(DirectionHandler::DOWN, base_anim_p);
+		anim_p.names[DirectionHandler::LEFT] = name_from_dir(DirectionHandler::LEFT, base_anim_p);
+		anim_p.names[DirectionHandler::RIGHT] = name_from_dir(DirectionHandler::RIGHT, base_anim_p);
 	}
 
 	void EntityDrawer::add_direction_handler(int idx_p, bool has_up_down_p)
 	{
-		EntityInstance &instance_l = _instances[idx_p];
-		int idxHandler_l = -1;
-		if(_freeHandlersIdx.empty())
+		EntityInstance &instance_l = _instances.get(idx_p);
+		if(instance_l.dir_handler.is_valid()
+		|| !instance_l.animation.is_valid())
 		{
-			idxHandler_l = int(_directionHandlers.size());
-			_directionHandlers.push_back(DirectionHandler());
-			_directionHandlers.back().instance = idx_p;
-			_directionHandlers.back().has_up_down = has_up_down_p;
+			return;
+		}
 
-		}
-		else
-		{
-			size_t idx_l = _freeHandlersIdx.front();
-			_freeHandlersIdx.pop_front();
-			_directionHandlers[idx_l].direction = Vector2();
-			_directionHandlers[idx_l].type = -1;
-			_directionHandlers[idx_l].has_up_down = has_up_down_p;
-			_directionHandlers[idx_l].enabled = true;
-			_directionHandlers[idx_l].count = 0;
-			_directionHandlers[idx_l].instance = idx_p;
-			_directionHandlers[idx_l].count_type = -1;
-			idxHandler_l = int(idx_l);
-		}
-		instance_l.handler = idxHandler_l;
-		init_handler(instance_l, _directionHandlers);
+		DirectionHandler handler_l;
+		handler_l.has_up_down = has_up_down_p;
+		handler_l.pos_idx = instance_l.pos_idx;
+		instance_l.dir_handler = dir_handlers.new_instance(handler_l);
+
+		DirectionalAnimation anim_l;
+		init_animation(anim_l, instance_l.animation.get().current_animation);
+		instance_l.dir_animation = dir_animations.new_instance(anim_l);
 	}
 
 	void EntityDrawer::remove_direction_handler(int idx_p)
 	{
-		EntityInstance &instance_l = _instances[idx_p];
-		if(instance_l.handler >= 0)
+		EntityInstance &instance_l = _instances.get(idx_p);
+		if(instance_l.dir_handler.is_valid())
 		{
-			_directionHandlers[instance_l.handler].enabled = false;
-			_freeHandlersIdx.push_back(instance_l.handler);
-			instance_l.handler = -1;
+			dir_handlers.free_instance(instance_l.dir_handler);
 		}
+		if(instance_l.animation.is_valid())
+		{
+			animations.free_instance(instance_l.animation);
+		}
+	}
+
+	void EntityDrawer::add_dynamic_animation(int idx_p, StringName const &idle_animation_p, StringName const &moving_animation_p)
+	{
+		EntityInstance &instance_l = _instances.get(idx_p);
+		if(instance_l.dyn_animation.is_valid())
+		{
+			return;
+		}
+		DynamicAnimation dyn_l;
+		init_animation(dyn_l.idle, idle_animation_p);
+		init_animation(dyn_l.moving, moving_animation_p);
+		instance_l.dyn_animation = dyn_animations.new_instance(dyn_l);
+	}
+
+	void EntityDrawer::add_pickable(int idx_p)
+	{
+		EntityInstance &instance_l = _instances.get(idx_p);
+		if(instance_l.alt_info.is_valid())
+		{
+			return;
+		}
+		instance_l.alt_info = alt_infos.recycle_instance();
+		RenderingInfo &info_l = instance_l.alt_info.get();
+
+		// if fresh new animation we set it up
+		if(instance_l.alt_info.revision() == 0 && _alt_viewport)
+		{
+			// set up resources
+			info_l.rid = RenderingServer::get_singleton()->canvas_item_create();
+			info_l.material = Ref<ShaderMaterial>(memnew(ShaderMaterial));
+			info_l.material->set_shader(_alt_shader);
+
+			RenderingServer::get_singleton()->canvas_item_set_parent(info_l.rid, _alt_viewport->get_canvas_item());
+			RenderingServer::get_singleton()->canvas_item_set_default_texture_filter(info_l.rid, RenderingServer::CANVAS_ITEM_TEXTURE_FILTER_NEAREST);
+			RenderingServer::get_singleton()->canvas_item_set_material(info_l.rid, info_l.material->get_rid());
+		}
+		info_l.material->set_shader_parameter("idx_color", color_from_idx(idx_p));
+	}
+
+	void EntityDrawer::remove_pickable(int idx_p)
+	{
+		EntityInstance &instance_l = _instances.get(idx_p);
+		if(instance_l.alt_info.is_valid())
+		{
+			alt_infos.free_instance(instance_l.alt_info);
+		}
+	}
+
+	void EntityDrawer::set_animation(int idx_p, StringName const &current_animation_p, StringName const &next_animation_p)
+	{
+		EntityInstance &instance_l = _instances.get(idx_p);
+		if(!instance_l.animation.is_valid())
+		{
+			return;
+		}
+		instance_l.animation.get().current_animation = current_animation_p;
+		instance_l.animation.get().next_animation = next_animation_p;
+		instance_l.animation.get().frame_idx = 0;
+		instance_l.animation.get().start = _elapsedAllTime;
+		instance_l.animation.get().one_shot = false;
+
+		if(instance_l.dir_animation.is_valid())
+		{
+			init_animation(instance_l.dir_animation.get(), current_animation_p);
+		}
+	}
+
+	void EntityDrawer::set_animation_one_shot(int idx_p, StringName const &current_animation_p)
+	{
+		EntityInstance &instance_l = _instances.get(idx_p);
+		if(!instance_l.animation.is_valid())
+		{
+			return;
+		}
+		instance_l.animation.get().current_animation = current_animation_p;
+		instance_l.animation.get().frame_idx = 0;
+		instance_l.animation.get().start = _elapsedAllTime;
+		instance_l.animation.get().one_shot = true;
+
+		if(instance_l.dir_animation.is_valid())
+		{
+			init_animation(instance_l.dir_animation.get(), current_animation_p);
+		}
+	}
+
+	StringName const & EntityDrawer::get_animation(int idx_p) const
+	{
+		EntityInstance const &instance_l = _instances.get(idx_p);
+		if(!instance_l.animation.is_valid())
+		{
+			static StringName none_l("");
+			return none_l;
+		}
+		return instance_l.animation.get().current_animation;
 	}
 
 	void EntityDrawer::set_new_pos(int idx_p, Vector2 const &pos_p)
@@ -348,9 +347,56 @@ namespace godot
 		return _oldPos[idx_p];
 	}
 
+	void EntityDrawer::update_pos()
+	{
+		_elapsedTime = 0.;
+		// swap positions
+		std::swap(_oldPos, _newPos);
+	}
+
 	Ref<ShaderMaterial> EntityDrawer::get_shader_material(int idx_p)
 	{
-		return _instances[idx_p]._material;
+		EntityInstance const &instance_l = _instances.get(idx_p);
+		if(!instance_l.animation.is_valid())
+		{
+			return Ref<ShaderMaterial>();
+		}
+		return instance_l.animation.get().info.material;
+	}
+
+	void EntityDrawer::set_shader_bool_params(String const &param_p, TypedArray<bool> const &values_p)
+	{
+		_instances.for_each([&](EntityInstance & instance_l, size_t idx_p) {
+			if(instance_l.animation.is_valid()
+			&& instance_l.animation.get().info.material.is_valid())
+			{
+				instance_l.animation.get().info.material->set_shader_parameter(param_p, values_p[idx_p]);
+			}
+		});
+	}
+
+	void EntityDrawer::set_shader_bool_params_from_indexes(String const &param_p, TypedArray<int> const &indexes_p, bool value_indexes_p, bool value_others_p)
+	{
+		// set all default values
+		_instances.for_each([&](EntityInstance & instance_l, size_t ) {
+			if(instance_l.animation.is_valid()
+			&& instance_l.animation.get().info.material.is_valid())
+			{
+				instance_l.animation.get().info.material->set_shader_parameter(param_p, value_others_p);
+			}
+		});
+
+		// set for indexes
+		for(size_t i = 0 ; i < indexes_p.size() ; ++ i)
+		{
+			int idx_l = indexes_p[i];
+			if(_instances.is_valid(idx_l)
+			&& _instances.get(idx_l).animation.is_valid()
+			&& _instances.get(idx_l).animation.get().info.material.is_valid())
+			{
+				_instances.get(idx_l).animation.get().info.material->set_shader_parameter(param_p, value_indexes_p);
+			}
+		}
 	}
 
 	TypedArray<int> EntityDrawer::indexes_from_texture(Rect2i const &rect_p, Ref<Texture2D> const &texture_p) const
@@ -396,36 +442,178 @@ namespace godot
 		return idx_from_color(safe_color(pos_p.x, pos_p.y, texture_p->get_image()));
 	}
 
-	void EntityDrawer::set_shader_bool_params(String const &param_p, TypedArray<bool> const &values_p)
+	void EntityDrawer::_ready()
 	{
-		for(size_t i = 0 ; i < values_p.size() && i < _instances.size() ; ++ i)
-		{
-			if(_instances[i]._material.is_valid())
-			{
-				_instances[i]._material->set_shader_parameter(param_p, values_p[i]);
-			}
-		}
+		// Custom shader to display a color per idx
+		_alt_shader = Ref<Shader>(memnew(Shader));
+		_alt_shader->set_code("\n\
+			shader_type canvas_item;\n\
+			\n\
+			uniform vec3 idx_color : source_color = vec3(1.0);\n\
+			\n\
+			void fragment() {\n\
+				COLOR.rgb = idx_color;\n\
+				COLOR.a = round(COLOR.a);\n\
+			}\n\
+			"
+		);
 	}
 
-	void EntityDrawer::set_shader_bool_params_from_indexes(String const &param_p, TypedArray<int> const &indexes_p, bool value_indexes_p, bool value_others_p)
+	StringName const &get_anim(EntityInstance &instance_p)
 	{
-		// set all default values
-		for(size_t i = 0 ; i < _instances.size() ; ++ i)
+		if(!instance_p.dir_handler.is_valid())
 		{
-			if(_instances[i]._material.is_valid())
-			{
-				_instances[i]._material->set_shader_parameter(param_p, value_others_p);
-			}
+			return instance_p.animation.get().current_animation;
 		}
-		// set for indexes
-		for(size_t i = 0 ; i < indexes_p.size() ; ++ i)
+		DirectionHandler const &handler_l = instance_p.dir_handler.get();
+
+		// forced directionl anim
+		if(instance_p.dir_animation.is_valid()
+		&& instance_p.dir_animation.get().base_name != StringName(""))
 		{
-			int idx_l = indexes_p[i];
-			if(idx_l < _instances.size() && _instances[idx_l]._material.is_valid())
-			{
-				_instances[idx_l]._material->set_shader_parameter(param_p, value_indexes_p);
-			}
+			return instance_p.dir_animation.get().names[handler_l.type];
 		}
+
+		if(instance_p.dyn_animation.is_valid()
+		&& instance_p.dir_handler.is_valid())
+		{
+			if(handler_l.idle)
+			{
+				return instance_p.dyn_animation.get().idle.names[handler_l.type];
+			}
+			return instance_p.dyn_animation.get().moving.names[handler_l.type];
+		}
+		return instance_p.animation.get().current_animation;
+	}
+
+	void EntityDrawer::_draw()
+	{
+		_instances.for_each([&](EntityInstance &instance_p, size_t idx_p) {
+			StringName const & cur_anim_l = get_anim(instance_p);
+			if(!instance_p.animation.is_valid())
+			{
+				return;
+			}
+			bool is_over_l = false;
+			AnimationInstance & animation_l = instance_p.animation.get();
+			if(animation_l.animation.is_valid() && animation_l.animation->get_frame_count(cur_anim_l) > 0)
+			{
+				double frameTime_l = animation_l.animation->get_frame_duration(cur_anim_l, animation_l.frame_idx) / animation_l.animation->get_animation_speed(cur_anim_l) ;
+				double nextFrameTime_l = animation_l.start + frameTime_l;
+				if(_elapsedAllTime >= nextFrameTime_l)
+				{
+					++animation_l.frame_idx;
+					animation_l.start = _elapsedAllTime;
+				}
+				if(animation_l.frame_idx >= animation_l.animation->get_frame_count(cur_anim_l))
+				{
+					if(animation_l.one_shot)
+					{
+						free_instance(idx_p);
+						is_over_l = true;
+					}
+					else if(!animation_l.next_animation.is_empty())
+					{
+						set_animation(idx_p, animation_l.next_animation, StringName(""));
+					}
+					animation_l.frame_idx = 0;
+				}
+				// if still enabled
+				if(!is_over_l)
+				{
+					Vector2 diff_l = _newPos[instance_p.pos_idx] - _oldPos[instance_p.pos_idx];
+					Vector2 pos_l =  (_oldPos[instance_p.pos_idx] + diff_l * std::min<real_t>(1., real_t(_elapsedTime/_timeStep))) * _scale;
+					// draw animaton
+					Ref<Texture2D> texture_l = animation_l.animation->get_frame_texture(cur_anim_l, animation_l.frame_idx);
+					RenderingServer::get_singleton()->canvas_item_set_transform(animation_l.info.rid, Transform2D(0., pos_l));
+					RenderingServer::get_singleton()->canvas_item_clear(animation_l.info.rid);
+
+					// required when empty texture in sprite frame
+					if(texture_l.is_valid())
+					{
+						// classic rendering
+						texture_l->draw(animation_l.info.rid, animation_l.offset);
+						// alternate rendering
+						if(instance_p.alt_info.is_valid()
+						&& instance_p.alt_info.get().rid.is_valid())
+						{
+							RenderingInfo &alt_info_l = instance_p.alt_info.get();
+							RenderingServer::get_singleton()->canvas_item_set_transform(alt_info_l.rid, Transform2D(0., pos_l));
+							RenderingServer::get_singleton()->canvas_item_clear(alt_info_l.rid);
+							texture_l->draw(alt_info_l.rid, animation_l.offset);
+						}
+					}
+				}
+			}
+		});
+	}
+
+	void EntityDrawer::_physics_process(double delta_p)
+	{
+		dir_handlers.for_each([&](DirectionHandler &handler_p) {
+			Vector2 dir_l = handler_p.direction;
+			int new_type = DirectionHandler::NONE;
+			if(dir_l.length_squared() < 0.1)
+			{
+				dir_l = _newPos[handler_p.pos_idx] - _oldPos[handler_p.pos_idx];
+			}
+			if(std::abs(dir_l.x) > 0.01 || std::abs(dir_l.y) > 0.01)
+			{
+				if(std::abs(dir_l.x) > std::abs(dir_l.y) || !handler_p.has_up_down)
+				{
+					if(dir_l.x > 0)
+					{
+						new_type = DirectionHandler::RIGHT;
+					}
+					else
+					{
+						new_type = DirectionHandler::LEFT;
+					}
+				}
+				else
+				{
+					if(dir_l.y > 0)
+					{
+						new_type = DirectionHandler::DOWN;
+					}
+					else
+					{
+						new_type = DirectionHandler::UP;
+					}
+				}
+			}
+			if(new_type != DirectionHandler::NONE)
+			{
+				handler_p.count_idle = 0;
+				handler_p.idle = false;
+				if(new_type != handler_p.count_type)
+				{
+					handler_p.count = 0;
+					handler_p.count_type = new_type;
+				}
+				if(handler_p.count < 100)
+				{
+					++handler_p.count;
+				}
+			}
+			else
+			{
+				++handler_p.count_idle;
+				handler_p.count = 0;
+				handler_p.count_type = DirectionHandler::NONE;
+			}
+
+			if(handler_p.count > 15
+			&& handler_p.count_type != DirectionHandler::NONE
+			&& handler_p.count_type != handler_p.type)
+			{
+				handler_p.type = handler_p.count_type;
+			}
+			if(handler_p.count_idle > 15)
+			{
+				handler_p.idle = true;
+			}
+		});
 	}
 
 	void EntityDrawer::_process(double delta_p)
@@ -435,77 +623,12 @@ namespace godot
 		queue_redraw();
 	}
 
-	void EntityDrawer::_draw()
-	{
-		size_t i = 0;
-		for(EntityInstance &instance_l : _instances)
-		{
-			StringName const &cur_anim_l = get_anim(instance_l, _directionHandlers);
-			if(instance_l.enabled && instance_l.animation.is_valid() && instance_l.animation->get_frame_count(cur_anim_l) > 0)
-			{
-				double frameTime_l = instance_l.animation->get_frame_duration(cur_anim_l, instance_l.frame_idx) / instance_l.animation->get_animation_speed(cur_anim_l) ;
-				double nextFrameTime_l = instance_l.start + frameTime_l;
-				if(_elapsedAllTime >= nextFrameTime_l)
-				{
-					++instance_l.frame_idx;
-					instance_l.start = _elapsedAllTime;
-				}
-				if(instance_l.frame_idx >= instance_l.animation->get_frame_count(cur_anim_l))
-				{
-					if(instance_l.one_shot)
-					{
-						// free animation
-						RenderingServer::get_singleton()->canvas_item_clear(instance_l._canvas);
-						if(instance_l._alt_canvas.is_valid())
-							RenderingServer::get_singleton()->canvas_item_clear(instance_l._alt_canvas);
-						instance_l.enabled = false;
-						_freeIdx.push_back(i);
-						if(instance_l.handler >= 0)
-						{
-							DirectionHandler & handler_l = _directionHandlers[instance_l.handler];
-							handler_l.enabled = false;
-							_freeHandlersIdx.push_back(i);
-						}
-					}
-					else if(!instance_l.next_animation.is_empty())
-					{
-						instance_l.current_animation = instance_l.next_animation;
-						instance_l.next_animation = StringName("");
-						init_handler(instance_l, _directionHandlers);
-					}
-					instance_l.frame_idx = 0;
-				}
-				// if still enabled
-				if(instance_l.enabled)
-				{
-					Vector2 diff_l = _newPos[i] - _oldPos[i];
-					Vector2 pos_l =  (_oldPos[i] + diff_l * std::min<real_t>(1., real_t(_elapsedTime/_timeStep))) * _scale;
-					// draw animaton
-					Ref<Texture2D> texture_l = instance_l.animation->get_frame_texture(cur_anim_l, instance_l.frame_idx);
-					RenderingServer::get_singleton()->canvas_item_set_transform(instance_l._canvas, Transform2D(0., pos_l));
-					RenderingServer::get_singleton()->canvas_item_clear(instance_l._canvas);
-
-					// required when empty texture in sprite frame
-					if(texture_l.is_valid())
-					{
-						texture_l->draw(instance_l._canvas, instance_l.offset);
-						// alternate rendering
-						if(instance_l._alt_canvas.is_valid())
-						{
-							RenderingServer::get_singleton()->canvas_item_set_transform(instance_l._alt_canvas, Transform2D(0., pos_l));
-							RenderingServer::get_singleton()->canvas_item_clear(instance_l._alt_canvas);
-							texture_l->draw(instance_l._alt_canvas, instance_l.offset);
-						}
-					}
-				}
-			}
-			++i;
-		}
-	}
-
 	void EntityDrawer::_bind_methods()
 	{
 		ClassDB::bind_method(D_METHOD("add_instance", "position", "offset", "animation", "current_animation", "next_animation", "one_shot"), &EntityDrawer::add_instance);
+		/// @todo
+		// add_sub_instance
+		// free_instance
 		ClassDB::bind_method(D_METHOD("update_pos"), &EntityDrawer::update_pos);
 
 		ClassDB::bind_method(D_METHOD("set_animation", "instance", "current_animation", "next_animation"), &EntityDrawer::set_animation);
