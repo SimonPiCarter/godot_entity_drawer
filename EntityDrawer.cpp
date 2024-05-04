@@ -236,9 +236,9 @@ namespace godot
 		{
 			dir_handlers.free_instance(instance_l.dir_handler);
 		}
-		if(instance_l.animation.is_valid())
+		if(instance_l.dir_animation.is_valid())
 		{
-			animations.free_instance(instance_l.animation);
+			dir_animations.free_instance(instance_l.dir_animation);
 		}
 	}
 
