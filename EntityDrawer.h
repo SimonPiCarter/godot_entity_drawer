@@ -12,6 +12,11 @@
 
 namespace godot {
 
+struct PositionIndex
+{
+	size_t idx = 999999999;
+};
+
 struct RenderingInfo
 {
 	RID rid;
@@ -83,7 +88,7 @@ struct EntityInstance
 	/////
 
 	/// @brief index to use in the position index
-	size_t pos_idx = 0;
+	smart_list_handle<PositionIndex> pos_idx;
 	smart_list_handle<AnimationInstance> animation;
 
 	/////
@@ -183,7 +188,7 @@ private:
 	/// @brief last position of instances to lerp
 	std::vector<Vector2> _newPos;
 	std::vector<Vector2> _oldPos;
-	/// @todo use smart list equivalent for pos
+	smart_list<PositionIndex> pos_indexes;
 
 	/// @brief expected duration of a timestep
 	double _timeStep = 0.01;

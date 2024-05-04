@@ -87,15 +87,17 @@ namespace godot
 		smart_list_handle<EntityInstance> handle_l = _instances.new_instance(entity_l);
 
 		// position
-		handle_l.get().pos_idx = handle_l.handle();
-		if(handle_l.get().pos_idx < _newPos.size()
-		&& handle_l.get().pos_idx < _oldPos.size())
+		handle_l.get().pos_idx = pos_indexes.recycle_instance();
+		if(handle_l.get().pos_idx.get().idx < _newPos.size()
+		&& handle_l.get().pos_idx.get().idx < _oldPos.size())
 		{
-			_newPos[handle_l.get().pos_idx] = pos_p;
-			_oldPos[handle_l.get().pos_idx] = pos_p;
+			_newPos[handle_l.get().pos_idx.get().idx] = pos_p;
+			_oldPos[handle_l.get().pos_idx.get().idx] = pos_p;
 		}
 		else
 		{
+			// update index
+			handle_l.get().pos_idx.get().idx = _newPos.size();
 			_newPos.push_back(pos_p);
 			_oldPos.push_back(pos_p);
 		}
@@ -181,7 +183,7 @@ namespace godot
 		// else we can clear the direction handler
 		else
 		{
-			/// @todo also clear position
+			pos_indexes.free_instance(instance_l.pos_idx);
 			dir_handlers.free_instance(instance_l.dir_handler);
 		}
 
@@ -227,7 +229,7 @@ namespace godot
 
 		DirectionHandler handler_l;
 		handler_l.has_up_down = has_up_down_p;
-		handler_l.pos_idx = instance_l.pos_idx;
+		handler_l.pos_idx = instance_l.pos_idx.get().idx;
 		instance_l.dir_handler = dir_handlers.new_instance(handler_l);
 
 		DirectionalAnimation anim_l;
@@ -535,8 +537,9 @@ namespace godot
 				// if still enabled
 				if(!is_over_l)
 				{
-					Vector2 diff_l = _newPos[instance_p.pos_idx] - _oldPos[instance_p.pos_idx];
-					Vector2 pos_l =  (_oldPos[instance_p.pos_idx] + diff_l * std::min<real_t>(1., real_t(_elapsedTime/_timeStep))) * _scale;
+					size_t pos_idx_l = instance_p.pos_idx.get().idx;
+					Vector2 diff_l = _newPos[pos_idx_l] - _oldPos[pos_idx_l];
+					Vector2 pos_l =  (_oldPos[pos_idx_l] + diff_l * std::min<real_t>(1., real_t(_elapsedTime/_timeStep))) * _scale;
 					// draw animaton
 					Ref<Texture2D> texture_l = animation_l.animation->get_frame_texture(cur_anim_l, animation_l.frame_idx);
 					RenderingServer::get_singleton()->canvas_item_set_transform(animation_l.info.rid, Transform2D(0., pos_l));
