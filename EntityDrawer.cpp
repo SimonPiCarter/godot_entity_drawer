@@ -38,6 +38,15 @@ namespace godot
 		return Color(1.f,1.f,1.f,1.f);
 	}
 
+	void init_animation(DirectionalAnimation &anim_p, StringName const &base_anim_p)
+	{
+		anim_p.base_name = base_anim_p;
+		anim_p.names[DirectionHandler::UP] = "up_"+base_anim_p;
+		anim_p.names[DirectionHandler::DOWN] = "down_"+base_anim_p;
+		anim_p.names[DirectionHandler::LEFT] = "left_"+base_anim_p;
+		anim_p.names[DirectionHandler::RIGHT] = "right_"+base_anim_p;
+	}
+
 	EntityDrawer::~EntityDrawer()
 	{
 		_instances.for_each([&](EntityInstance &, size_t idx_p) {
@@ -82,6 +91,8 @@ namespace godot
 		// animation
 		entity_l.animation = animations.recycle_instance();
 		set_up_animation(entity_l.animation, _elapsedAllTime, _shader, get_canvas_item(), offset_p, animation_p, current_animation_p, next_animation_p, one_shot_p);
+		// reset z_index in case we reuse an instance for a sub instance
+		RenderingServer::get_singleton()->canvas_item_set_z_index(entity_l.animation.get().info.rid, 0);
 
 		// register instance
 		smart_list_handle<EntityInstance> handle_l = _instances.new_instance(entity_l);
@@ -106,7 +117,8 @@ namespace godot
 	}
 
 	int EntityDrawer::add_sub_instance(int idx_ref_p, Vector2 const &offset_p, Ref<SpriteFrames> const & animation_p,
-					StringName const &current_animation_p, StringName const &next_animation_p, bool one_shot_p)
+					StringName const &current_animation_p, StringName const &next_animation_p,
+					bool one_shot_p, bool in_front_p, bool use_directions_p)
 	{
 		if(!_instances.is_valid(idx_ref_p))
 		{
@@ -116,12 +128,22 @@ namespace godot
 
 		// animation
 		entity_l.animation = animations.recycle_instance();
-		set_up_animation(entity_l.animation, _elapsedTime, _shader, get_canvas_item(), offset_p, animation_p, current_animation_p, next_animation_p, one_shot_p);
+		set_up_animation(entity_l.animation, _elapsedAllTime, _shader, get_canvas_item(), offset_p, animation_p, current_animation_p, next_animation_p, one_shot_p);
+		RenderingServer::get_singleton()->canvas_item_set_z_index(entity_l.animation.get().info.rid, in_front_p ? 1 : -1);
 
 		// copy reference for position and dir_handler
 		entity_l.pos_idx = _instances.get(idx_ref_p).pos_idx;
-		entity_l.dir_handler = _instances.get(idx_ref_p).dir_handler;
 		entity_l.main_instance = _instances.get_handle(idx_ref_p);
+		if(use_directions_p)
+		{
+			entity_l.dir_handler = _instances.get(idx_ref_p).dir_handler;
+			if(entity_l.dir_handler.is_valid())
+			{
+				DirectionalAnimation anim_l;
+				init_animation(anim_l, entity_l.animation.get().current_animation);
+				entity_l.dir_animation = dir_animations.new_instance(anim_l);
+			}
+		}
 
 		// register instance
 		smart_list_handle<EntityInstance> handle_l = _instances.new_instance(entity_l);
@@ -198,24 +220,6 @@ namespace godot
 			return;
 		}
 		instance_l.dir_handler.get().direction = direction_p;
-	}
-
-	StringName name_from_dir(int dir_p, StringName const &name_p)
-	{
-		if(DirectionHandler::UP == dir_p) { return  StringName("up_"+name_p); }
-		if(DirectionHandler::DOWN == dir_p) { return  StringName("down_"+name_p); }
-		if(DirectionHandler::LEFT == dir_p) { return  StringName("left_"+name_p); }
-		if(DirectionHandler::RIGHT == dir_p) { return  StringName("right_"+name_p); }
-		return name_p;
-	}
-
-	void init_animation(DirectionalAnimation &anim_p, StringName const &base_anim_p)
-	{
-		anim_p.base_name = base_anim_p;
-		anim_p.names[DirectionHandler::UP] = name_from_dir(DirectionHandler::UP, base_anim_p);
-		anim_p.names[DirectionHandler::DOWN] = name_from_dir(DirectionHandler::DOWN, base_anim_p);
-		anim_p.names[DirectionHandler::LEFT] = name_from_dir(DirectionHandler::LEFT, base_anim_p);
-		anim_p.names[DirectionHandler::RIGHT] = name_from_dir(DirectionHandler::RIGHT, base_anim_p);
 	}
 
 	void EntityDrawer::add_direction_handler(int idx_p, bool has_up_down_p)
@@ -643,9 +647,8 @@ namespace godot
 	void EntityDrawer::_bind_methods()
 	{
 		ClassDB::bind_method(D_METHOD("add_instance", "position", "offset", "animation", "current_animation", "next_animation", "one_shot"), &EntityDrawer::add_instance);
-		/// @todo
-		// add_sub_instance
-		// free_instance
+		ClassDB::bind_method(D_METHOD("add_sub_instance", "idx_ref", "offset", "animation", "current_animation", "next_animation", "one_shot", "in_front", "use_directions"), &EntityDrawer::add_sub_instance);
+		ClassDB::bind_method(D_METHOD("free_instance", "idx"), &EntityDrawer::free_instance);
 		ClassDB::bind_method(D_METHOD("update_pos"), &EntityDrawer::update_pos);
 
 		ClassDB::bind_method(D_METHOD("set_animation", "instance", "current_animation", "next_animation"), &EntityDrawer::set_animation);
@@ -653,6 +656,7 @@ namespace godot
 		ClassDB::bind_method(D_METHOD("set_direction", "instance", "direction"), &EntityDrawer::set_direction);
 		ClassDB::bind_method(D_METHOD("add_direction_handler", "instance", "has_up_down"), &EntityDrawer::add_direction_handler);
 		ClassDB::bind_method(D_METHOD("remove_direction_handler", "instance"), &EntityDrawer::remove_direction_handler);
+		ClassDB::bind_method(D_METHOD("add_dynamic_animation", "instance", "idle_animation", "moving_animation"), &EntityDrawer::add_dynamic_animation);
 		ClassDB::bind_method(D_METHOD("set_new_pos", "instance", "pos"), &EntityDrawer::set_new_pos);
 		ClassDB::bind_method(D_METHOD("get_old_pos", "instance"), &EntityDrawer::get_old_pos);
 		ClassDB::bind_method(D_METHOD("get_shader_material", "instance"), &EntityDrawer::get_shader_material);
