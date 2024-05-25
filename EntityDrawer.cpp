@@ -624,13 +624,13 @@ namespace godot
 				handler_p.count_type = DirectionHandler::NONE;
 			}
 
-			if(handler_p.count > 15
+			if(handler_p.count > 1
 			&& handler_p.count_type != DirectionHandler::NONE
 			&& handler_p.count_type != handler_p.type)
 			{
 				handler_p.type = handler_p.count_type;
 			}
-			if(handler_p.count_idle > 15)
+			if(handler_p.count_idle > 1)
 			{
 				handler_p.idle = true;
 			}
