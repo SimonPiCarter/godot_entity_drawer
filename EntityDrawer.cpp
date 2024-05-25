@@ -508,7 +508,7 @@ namespace godot
 	void EntityDrawer::_draw()
 	{
 		_instances.for_each([&](EntityInstance &instance_p, size_t idx_p) {
-			StringName const & cur_anim_l = get_anim(instance_p);
+			StringName cur_anim_l = get_anim(instance_p);
 			std::string test_l(cur_anim_l.substr(0,-1).utf8().get_data());
 			if(!instance_p.animation.is_valid())
 			{
@@ -535,6 +535,13 @@ namespace godot
 					else if(animation_l.next_animation != StringName(""))
 					{
 						set_animation(idx_p, animation_l.next_animation, StringName(""));
+						cur_anim_l = get_anim(instance_p);
+					}
+					// if dynamic animation and no chaining we reset
+					else if(instance_p.dyn_animation.is_valid())
+					{
+						set_animation(idx_p, StringName(""), StringName(""));
+						cur_anim_l = get_anim(instance_p);
 					}
 					animation_l.frame_idx = 0;
 				}
