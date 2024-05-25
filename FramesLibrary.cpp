@@ -15,7 +15,7 @@ FrameInfo const & FramesLibrary::getFrameInfo(std::string const &name_p)
 
 void FramesLibrary::_bind_methods()
 {
-	ClassDB::bind_method(D_METHOD("addFrame", "name", "frame", "offset" "has_up_down"), &FramesLibrary::addFrame);
+	ClassDB::bind_method(D_METHOD("addFrame", "name", "frame", "offset", "has_up_down"), &FramesLibrary::addFrame);
 
 	ADD_GROUP("FramesLibrary", "FramesLibrary_");
 }
