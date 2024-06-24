@@ -9,6 +9,7 @@
 #include <array>
 
 #include "smart_list/smart_list.h"
+#include "EntityPayload.h"
 
 namespace godot {
 
@@ -173,6 +174,9 @@ public:
 	void set_shader(Ref<Shader> const &shader_p) { _shader = shader_p; }
 	void set_alt_viewport(Node2D *alt_viewport_p) { _alt_viewport = alt_viewport_p; }
 
+	// payload setup (free old one)
+	void setup_payload(AbstractEntityPayload * payload_hanlder_p);
+
 private:
 	Ref<Shader> _shader;
 
@@ -203,6 +207,8 @@ private:
 	/// differently (used for mouse picking)
 	Node2D *_alt_viewport = nullptr;
 	Ref<Shader> _alt_shader;
+
+	AbstractEntityPayload * _payload_handler = new NoOpEntityPayload();
 
 	double const _scale = 1.;
 };

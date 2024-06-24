@@ -52,6 +52,7 @@ namespace godot
 		_instances.for_each([&](EntityInstance &, size_t idx_p) {
 			free_instance(idx_p);
 		});
+		delete _payload_handler;
 	}
 
 	// helper for animation
@@ -96,6 +97,8 @@ namespace godot
 
 		// register instance
 		smart_list_handle<EntityInstance> handle_l = _instances.new_instance(entity_l);
+		// add payload
+		_payload_handler->add_payload();
 
 		// position
 		handle_l.get().pos_idx = pos_indexes.recycle_instance();
@@ -209,6 +212,8 @@ namespace godot
 			dir_handlers.free_instance(instance_l.dir_handler);
 		}
 
+		// free payload
+		_payload_handler->free_payload(idx_p);
 		_instances.free_instance(idx_p);
 	}
 
@@ -679,6 +684,16 @@ namespace godot
 		ClassDB::bind_method(D_METHOD("index_from_texture", "pos", "texture"), &EntityDrawer::index_from_texture);
 
 		ADD_GROUP("EntityDrawer", "EntityDrawer_");
+	}
+
+	void EntityDrawer::setup_payload(AbstractEntityPayload * payload_hanlder_p)
+	{
+		if(_instances.size() > 0)
+		{
+			throw std::logic_error("cannot setup payload with instances.");
+		}
+		delete _payload_handler;
+		_payload_handler = payload_hanlder_p;
 	}
 
 } // namespace godot
