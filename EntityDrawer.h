@@ -13,6 +13,8 @@
 
 namespace godot {
 
+class TextureCatcher;
+
 struct PositionIndex
 {
 	size_t idx = 999999999;
@@ -155,9 +157,9 @@ public:
 	void set_shader_bool_params_from_indexes(String const &param_p, TypedArray<int> const &indexes_p, bool value_indexes_p, bool value_others_p);
 
 	/// getters for alternative rendering
-	TypedArray<int> indexes_from_texture(Rect2i const &rect_p, Ref<Texture2D> const &texture_p) const;
-	TypedArray<bool> index_array_from_texture(Rect2i const &rect_p, Ref<Texture2D> const &texture_p) const;
-	int index_from_texture(Vector2i const &pos_p, Ref<Texture2D> const &texture_p) const;
+	TypedArray<int> indexes_from_texture(Rect2 const &rect_p) const;
+	TypedArray<bool> index_array_from_texture(Rect2 const &rect_p) const;
+	int index_from_texture(Vector2 const &pos_p) const;
 
 	// godot routines
 	void _ready() override;
@@ -169,10 +171,21 @@ public:
 	// Use this to add properties to your class
 	static void _bind_methods();
 
+	/// Properties
+
+	// getter/setter
+	double get_scale_viewport() const { return _scale_viewport; }
+	void set_scale_viewport(double const &scale_viewport) { _scale_viewport = scale_viewport; }
+	NodePath const & get_ref_camera() const { return _ref_camera_path; }
+	void set_ref_camera(NodePath const &ref_camera) { _ref_camera_path = ref_camera; }
+	void set_debug(bool debug_p);
+	bool is_debug() const;
+
+	/// Properties END
+
 	// set up
 	void set_time_step(double timeStep_p) { _timeStep = timeStep_p; }
 	void set_shader(Ref<Shader> const &shader_p) { _shader = shader_p; }
-	void set_alt_viewport(Node2D *alt_viewport_p) { _alt_viewport = alt_viewport_p; }
 
 	// payload setup (free old one)
 	void setup_payload(AbstractEntityPayload * payload_hanlder_p);
@@ -205,8 +218,12 @@ private:
 
 	/// @brief an alternative rendering layer used to render the entities
 	/// differently (used for mouse picking)
-	Node2D *_alt_viewport = nullptr;
+	TextureCatcher *_texture_catcher = nullptr;
 	Ref<Shader> _alt_shader;
+
+	// properties
+	double _scale_viewport = 2.;
+	NodePath _ref_camera_path;
 
 	AbstractEntityPayload * _payload_handler = new NoOpEntityPayload();
 

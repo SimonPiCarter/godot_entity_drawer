@@ -2,7 +2,6 @@
 #include <godot_cpp/variant/utility_functions.hpp>
 
 #include <godot_cpp/classes/color_rect.hpp>
-#include <godot_cpp/classes/viewport_texture.hpp>
 #include <godot_cpp/classes/window.hpp>
 
 namespace godot {
@@ -102,6 +101,7 @@ void TextureCatcher::_bind_methods()
 	ClassDB::bind_method(D_METHOD("set_debug", "debug"), &TextureCatcher::set_debug);
 	ClassDB::bind_method(D_METHOD("is_debug"), &TextureCatcher::is_debug);
 	ClassDB::bind_method(D_METHOD("get_alt_viewport"), &TextureCatcher::get_alt_viewport);
+	ClassDB::bind_method(D_METHOD("get_texture"), &TextureCatcher::get_texture);
 
 	ClassDB::bind_method(D_METHOD("get_scale_viewport"), &TextureCatcher::get_scale_viewport);
 	ClassDB::bind_method(D_METHOD("set_scale_viewport", "scale_viewport"), &TextureCatcher::set_scale_viewport);

@@ -4,6 +4,7 @@
 #include <godot_cpp/classes/rendering_server.hpp>
 
 #include <algorithm>
+#include "TextureCatcher.h"
 
 namespace godot
 {
@@ -283,14 +284,14 @@ namespace godot
 		RenderingInfo &info_l = instance_l.alt_info.get();
 
 		// if fresh new animation we set it up
-		if(instance_l.alt_info.revision() == 0 && _alt_viewport)
+		if(instance_l.alt_info.revision() == 0 && _texture_catcher)
 		{
 			// set up resources
 			info_l.rid = RenderingServer::get_singleton()->canvas_item_create();
 			info_l.material = Ref<ShaderMaterial>(memnew(ShaderMaterial));
 			info_l.material->set_shader(_alt_shader);
 
-			RenderingServer::get_singleton()->canvas_item_set_parent(info_l.rid, _alt_viewport->get_canvas_item());
+			RenderingServer::get_singleton()->canvas_item_set_parent(info_l.rid, _texture_catcher->get_alt_viewport()->get_canvas_item());
 			RenderingServer::get_singleton()->canvas_item_set_default_texture_filter(info_l.rid, RenderingServer::CANVAS_ITEM_TEXTURE_FILTER_NEAREST);
 			RenderingServer::get_singleton()->canvas_item_set_material(info_l.rid, info_l.material->get_rid());
 		}
@@ -418,10 +419,9 @@ namespace godot
 		}
 	}
 
-	TypedArray<int> EntityDrawer::indexes_from_texture(Rect2i const &rect_p, Ref<Texture2D> const &texture_p) const
+	TypedArray<int> EntityDrawer::indexes_from_texture(Rect2 const &rect_p) const
 	{
-		Ref<Image> image_l = texture_p->get_image();
-		TypedArray<bool> all_added_l = index_array_from_texture(rect_p, texture_p);
+		TypedArray<bool> all_added_l = index_array_from_texture(rect_p);
 
 		TypedArray<int> indexes_l;
 		int idx_l = 0;
@@ -436,15 +436,22 @@ namespace godot
 		return indexes_l;
 	}
 
-	TypedArray<bool> EntityDrawer::index_array_from_texture(Rect2i const &rect_p, Ref<Texture2D> const &texture_p) const
+	TypedArray<bool> EntityDrawer::index_array_from_texture(Rect2 const &rect_p) const
 	{
-		Ref<Image> image_l = texture_p->get_image();
+		if(!_texture_catcher)
+		{
+			return TypedArray<bool>();
+		}
+		// scale from texture viewport scale
+		double scale_l = _texture_catcher->get_scale_viewport();
+		Rect2i scale_rect_l = Rect2i(rect_p.get_position() / scale_l, rect_p.get_size() / scale_l);
+		Ref<Image> image_l = _texture_catcher->get_texture()->get_image();
 		TypedArray<bool> all_added_l;
 		all_added_l.resize(_instances.size());
 		all_added_l.fill(false);
-		for(int32_t x = rect_p.get_position().x ; x <= rect_p.get_position().x + rect_p.get_size().x ; ++ x)
+		for(int32_t x = scale_rect_l.get_position().x ; x <= scale_rect_l.get_position().x + scale_rect_l.get_size().x ; ++ x)
 		{
-			for(int32_t y = rect_p.get_position().y ; y <= rect_p.get_position().y + rect_p.get_size().y ; ++ y)
+			for(int32_t y = scale_rect_l.get_position().y ; y <= scale_rect_l.get_position().y + scale_rect_l.get_size().y ; ++ y)
 			{
 				int idx_l = idx_from_color(safe_color(x, y, image_l));
 				if(idx_l >= 0)
@@ -456,9 +463,17 @@ namespace godot
 		return all_added_l;
 	}
 
-	int EntityDrawer::index_from_texture(Vector2i const &pos_p, Ref<Texture2D> const &texture_p) const
+	int EntityDrawer::index_from_texture(Vector2 const &pos_p) const
 	{
-		return idx_from_color(safe_color(pos_p.x, pos_p.y, texture_p->get_image()));
+		if(!_texture_catcher)
+		{
+			return -1;
+		}
+		// scale from texture viewport scale
+		double scale_l = _texture_catcher->get_scale_viewport();
+		Vector2 scale_pos_l = pos_p / scale_l;
+
+		return idx_from_color(safe_color(scale_pos_l.x, scale_pos_l.y, _texture_catcher->get_texture()->get_image()));
 	}
 
 	void EntityDrawer::_ready()
@@ -476,6 +491,11 @@ namespace godot
 			}\n\
 			"
 		);
+
+		_texture_catcher = memnew(TextureCatcher);
+		_texture_catcher->set_scale_viewport(_scale_viewport);
+		_texture_catcher->set_ref_camera("../"+_ref_camera_path);
+		add_child(_texture_catcher);
 	}
 
 	StringName const &get_anim(EntityInstance &instance_p)
@@ -675,13 +695,25 @@ namespace godot
 		ClassDB::bind_method(D_METHOD("set_shader_bool_params", "param", "values"), &EntityDrawer::set_shader_bool_params);
 		ClassDB::bind_method(D_METHOD("set_shader_bool_params_from_indexes", "param", "indexes", "value_index", "value_other"), &EntityDrawer::set_shader_bool_params_from_indexes);
 		ClassDB::bind_method(D_METHOD("set_shader", "material"), &EntityDrawer::set_shader);
-		ClassDB::bind_method(D_METHOD("set_alt_viewport", "alt_viewport"), &EntityDrawer::set_alt_viewport);
 
 		ClassDB::bind_method(D_METHOD("set_time_step", "time_step"), &EntityDrawer::set_time_step);
 
-		ClassDB::bind_method(D_METHOD("indexes_from_texture", "rect", "texture"), &EntityDrawer::indexes_from_texture);
-		ClassDB::bind_method(D_METHOD("index_array_from_texture", "rect", "texture"), &EntityDrawer::index_array_from_texture);
-		ClassDB::bind_method(D_METHOD("index_from_texture", "pos", "texture"), &EntityDrawer::index_from_texture);
+		ClassDB::bind_method(D_METHOD("indexes_from_texture", "rect"), &EntityDrawer::indexes_from_texture);
+		ClassDB::bind_method(D_METHOD("index_array_from_texture", "rect"), &EntityDrawer::index_array_from_texture);
+		ClassDB::bind_method(D_METHOD("index_from_texture", "pos"), &EntityDrawer::index_from_texture);
+
+		// properties
+		ClassDB::bind_method(D_METHOD("get_scale_viewport"), &EntityDrawer::get_scale_viewport);
+		ClassDB::bind_method(D_METHOD("set_scale_viewport", "scale_viewport"), &EntityDrawer::set_scale_viewport);
+		ClassDB::add_property("EntityDrawer", PropertyInfo(Variant::FLOAT, "scale_viewport"), "set_scale_viewport", "get_scale_viewport");
+
+		ClassDB::bind_method(D_METHOD("get_ref_camera"), &EntityDrawer::get_ref_camera);
+		ClassDB::bind_method(D_METHOD("set_ref_camera", "ref_camera"), &EntityDrawer::set_ref_camera);
+		ClassDB::add_property("EntityDrawer", PropertyInfo(Variant::NODE_PATH, "ref_camera", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Camera2D"), "set_ref_camera", "get_ref_camera");
+
+		ClassDB::bind_method(D_METHOD("set_debug", "debug"), &EntityDrawer::set_debug);
+		ClassDB::bind_method(D_METHOD("is_debug"), &EntityDrawer::is_debug);
+		ClassDB::add_property("EntityDrawer", PropertyInfo(Variant::BOOL, "debug"), "set_debug", "is_debug");
 
 		ADD_GROUP("EntityDrawer", "EntityDrawer_");
 	}
@@ -695,6 +727,9 @@ namespace godot
 		delete _payload_handler;
 		_payload_handler = payload_hanlder_p;
 	}
+
+	void EntityDrawer::set_debug(bool debug_p) { _texture_catcher->set_debug(debug_p); }
+	bool EntityDrawer::is_debug() const { return _texture_catcher->is_debug(); }
 
 } // namespace godot
 

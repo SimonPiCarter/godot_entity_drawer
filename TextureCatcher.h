@@ -7,6 +7,7 @@
 #include <godot_cpp/classes/sprite2d.hpp>
 #include <godot_cpp/classes/sub_viewport.hpp>
 #include <godot_cpp/classes/texture_rect.hpp>
+#include <godot_cpp/classes/viewport_texture.hpp>
 
 #include <string>
 #include <unordered_map>
@@ -30,6 +31,7 @@ public:
 	bool is_debug() const { return _debug_canvas->is_visible(); }
 
 	Node2D * get_alt_viewport() { return _alt_viewport; }
+	Ref<ViewportTexture> get_texture() const { return _sub_viewport->get_texture(); }
 
 	// signal
 	void _on_size_changed();
