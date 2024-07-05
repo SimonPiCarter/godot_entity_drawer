@@ -32,7 +32,7 @@ public:
 		return _list.get(idx_p);
 	}
 
-	T& get_payload(int idx_p) const
+	T const & get_payload(int idx_p) const
 	{
 		return _list.get(idx_p);
 	}
