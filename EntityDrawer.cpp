@@ -494,7 +494,10 @@ namespace godot
 
 		_texture_catcher = memnew(TextureCatcher);
 		_texture_catcher->set_scale_viewport(_scale_viewport);
-		_texture_catcher->set_ref_camera("../"+_ref_camera_path);
+		if(!_ref_camera_path.is_empty())
+		{
+			_texture_catcher->set_ref_camera("../"+_ref_camera_path);
+		}
 		add_child(_texture_catcher);
 	}
 
@@ -728,8 +731,8 @@ namespace godot
 		_payload_handler = payload_hanlder_p;
 	}
 
-	void EntityDrawer::set_debug(bool debug_p) { _texture_catcher->set_debug(debug_p); }
-	bool EntityDrawer::is_debug() const { return _texture_catcher->is_debug(); }
+	void EntityDrawer::set_debug(bool debug_p) { if(_texture_catcher) _texture_catcher->set_debug(debug_p); }
+	bool EntityDrawer::is_debug() const { if(_texture_catcher) return _texture_catcher->is_debug(); else return false; }
 
 } // namespace godot
 
