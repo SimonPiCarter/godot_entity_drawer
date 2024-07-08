@@ -9,7 +9,8 @@ namespace godot {
 void TextureCatcher::_ready()
 {
 	set_texture_filter(CanvasItem::TextureFilter::TEXTURE_FILTER_NEAREST);
-	_ref_camera = get_node<Camera2D>(_ref_camera_path);
+	if(!_ref_camera_path.is_empty())
+		_ref_camera = get_node<Camera2D>(_ref_camera_path);
 	// set up basic tree
 	// - Subviewport : viewport used to render the picking texture
 	//   - CanvasLayer
