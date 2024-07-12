@@ -395,7 +395,22 @@ namespace godot
 		});
 	}
 
-	void EntityDrawer::set_shader_bool_params_from_indexes(String const &param_p, TypedArray<int> const &indexes_p, bool value_indexes_p, bool value_others_p)
+	void EntityDrawer::set_shader_bool_params_from_indexes(String const &param_p, TypedArray<int> const &indexes_p, bool value_indexes_p)
+	{
+		// set for indexes
+		for(size_t i = 0 ; i < indexes_p.size() ; ++ i)
+		{
+			int idx_l = indexes_p[i];
+			if(_instances.is_valid(idx_l)
+			&& _instances.get(idx_l).animation.is_valid()
+			&& _instances.get(idx_l).animation.get().info.material.is_valid())
+			{
+				_instances.get(idx_l).animation.get().info.material->set_shader_parameter(param_p, value_indexes_p);
+			}
+		}
+	}
+
+	void EntityDrawer::set_all_shader_bool_params_from_indexes(String const &param_p, TypedArray<int> const &indexes_p, bool value_indexes_p, bool value_others_p)
 	{
 		// set all default values
 		_instances.for_each([&](EntityInstance & instance_l, size_t ) {
@@ -696,7 +711,8 @@ namespace godot
 		ClassDB::bind_method(D_METHOD("get_old_pos", "instance"), &EntityDrawer::get_old_pos);
 		ClassDB::bind_method(D_METHOD("get_shader_material", "instance"), &EntityDrawer::get_shader_material);
 		ClassDB::bind_method(D_METHOD("set_shader_bool_params", "param", "values"), &EntityDrawer::set_shader_bool_params);
-		ClassDB::bind_method(D_METHOD("set_shader_bool_params_from_indexes", "param", "indexes", "value_index", "value_other"), &EntityDrawer::set_shader_bool_params_from_indexes);
+		ClassDB::bind_method(D_METHOD("set_shader_bool_params_from_indexes", "param", "indexes", "value_index"), &EntityDrawer::set_shader_bool_params_from_indexes);
+		ClassDB::bind_method(D_METHOD("set_all_shader_bool_params_from_indexes", "param", "indexes", "value_index", "value_other"), &EntityDrawer::set_all_shader_bool_params_from_indexes);
 		ClassDB::bind_method(D_METHOD("set_shader", "material"), &EntityDrawer::set_shader);
 
 		ClassDB::bind_method(D_METHOD("set_time_step", "time_step"), &EntityDrawer::set_time_step);

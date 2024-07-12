@@ -154,7 +154,8 @@ public:
 	// shader handling
 	Ref<ShaderMaterial> get_shader_material(int idx_p);
 	void set_shader_bool_params(String const &param_p, TypedArray<bool> const &values_p);
-	void set_shader_bool_params_from_indexes(String const &param_p, TypedArray<int> const &indexes_p, bool value_indexes_p, bool value_others_p);
+	void set_shader_bool_params_from_indexes(String const &param_p, TypedArray<int> const &indexes_p, bool value_indexes_p);
+	void set_all_shader_bool_params_from_indexes(String const &param_p, TypedArray<int> const &indexes_p, bool value_indexes_p, bool value_others_p);
 
 	/// getters for alternative rendering
 	TypedArray<int> indexes_from_texture(Rect2 const &rect_p) const;
