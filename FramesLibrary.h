@@ -23,6 +23,7 @@ public:
 	void addFrame(String const &name_p, Ref<SpriteFrames> const &frame_p, Vector2 const &offset_p, bool has_up_down_p);
 
 	FrameInfo const & getFrameInfo(std::string const &name_p);
+	FrameInfo const * tryGetFrameInfo(std::string const &name_p) const;
 
 	// Will be called by Godot when the class is registered
 	// Use this to add properties to your class

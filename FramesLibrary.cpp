@@ -13,6 +13,16 @@ FrameInfo const & FramesLibrary::getFrameInfo(std::string const &name_p)
 	return _mapFrames.at(name_p);
 }
 
+FrameInfo const *  FramesLibrary::tryGetFrameInfo(std::string const &name_p) const
+{
+	auto it_l = _mapFrames.find(name_p);
+	if(it_l == _mapFrames.end())
+	{
+		return nullptr;
+	}
+	return &it_l->second;
+}
+
 void FramesLibrary::_bind_methods()
 {
 	ClassDB::bind_method(D_METHOD("addFrame", "name", "frame", "offset", "has_up_down"), &FramesLibrary::addFrame);
