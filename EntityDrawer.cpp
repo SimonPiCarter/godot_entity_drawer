@@ -86,7 +86,7 @@ namespace godot
 	}
 
 	int EntityDrawer::add_instance(Vector2 const &pos_p, Vector2 const &offset_p, Ref<SpriteFrames> const & animation_p,
-		StringName const &current_animation_p, StringName const &next_animation_p, bool one_shot_p)
+		StringName const &current_animation_p, StringName const &next_animation_p, bool one_shot_p, bool in_front_p)
 	{
 		EntityInstance entity_l;
 
@@ -94,7 +94,7 @@ namespace godot
 		entity_l.animation = animations.recycle_instance();
 		set_up_animation(entity_l.animation, _elapsedAllTime, _shader, get_canvas_item(), offset_p, animation_p, current_animation_p, next_animation_p, one_shot_p);
 		// reset z_index in case we reuse an instance for a sub instance
-		RenderingServer::get_singleton()->canvas_item_set_z_index(entity_l.animation.get().info.rid, 0);
+		RenderingServer::get_singleton()->canvas_item_set_z_index(entity_l.animation.get().info.rid, in_front_p? 1 : 0);
 
 		// register instance
 		smart_list_handle<EntityInstance> handle_l = _instances.new_instance(entity_l);

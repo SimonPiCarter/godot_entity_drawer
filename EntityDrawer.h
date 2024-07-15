@@ -123,7 +123,7 @@ public:
 
 	// creating instances
 	int add_instance(Vector2 const &pos_p, Vector2 const &offset_p, Ref<SpriteFrames> const & animation_p,
-		StringName const &current_animation_p, StringName const &next_animation_p, bool one_shot_p);
+		StringName const &current_animation_p, StringName const &next_animation_p, bool one_shot_p, bool in_front_p);
 	int add_sub_instance(int idx_ref_p, Vector2 const &offset_p, Ref<SpriteFrames> const & animation_p,
 					StringName const &current_animation_p, StringName const &next_animation_p,
 					bool one_shot_p, bool in_front_p, bool use_directions_p);
