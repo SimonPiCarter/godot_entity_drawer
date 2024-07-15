@@ -210,7 +210,10 @@ namespace godot
 		else
 		{
 			pos_indexes.free_instance(instance_l.pos_idx);
-			dir_handlers.free_instance(instance_l.dir_handler);
+			if(instance_l.dir_handler.is_valid())
+			{
+				dir_handlers.free_instance(instance_l.dir_handler);
+			}
 		}
 
 		// free payload
