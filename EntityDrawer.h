@@ -127,7 +127,7 @@ public:
 	int add_sub_instance(int idx_ref_p, Vector2 const &offset_p, Ref<SpriteFrames> const & animation_p,
 					StringName const &current_animation_p, StringName const &next_animation_p,
 					bool one_shot_p, bool in_front_p, bool use_directions_p);
-	void free_instance(int idx_p);
+	void free_instance(int idx_p, bool skip_main_free_p=false);
 
 	// direction handling
 	void set_direction(int idx_p, Vector2 const &direction_p);

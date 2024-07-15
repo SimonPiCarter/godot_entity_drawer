@@ -151,6 +151,8 @@ namespace godot
 
 		// register instance
 		smart_list_handle<EntityInstance> handle_l = _instances.new_instance(entity_l);
+		// add payload
+		_payload_handler->add_payload();
 
 		// set up relation for main instance
 		entity_l.main_instance.get().sub_instances.push_back(handle_l);
@@ -158,7 +160,7 @@ namespace godot
 		return int(handle_l.handle());
 	}
 
-	void EntityDrawer::free_instance(int idx_p)
+	void EntityDrawer::free_instance(int idx_p, bool skip_main_free_p)
 	{
 		EntityInstance &instance_l = _instances.get(idx_p);
 
@@ -188,21 +190,24 @@ namespace godot
 		{
 			if(subs_l.is_valid())
 			{
-				free_instance(subs_l.handle());
+				free_instance(subs_l.handle(), true);
 			}
 		}
 
 		// if we are a sub instance we release ourself from our main
 		if(instance_l.main_instance.is_valid())
 		{
-			std::list<smart_list_handle<EntityInstance> > & sub_instances_l = instance_l.main_instance.get().sub_instances;
-			// remove itself
-			for(auto it_l = sub_instances_l.begin() ; it_l != sub_instances_l.end() ; ++it_l )
+			if(!skip_main_free_p)
 			{
-				if(it_l->handle() == idx_p)
+				std::list<smart_list_handle<EntityInstance> > & sub_instances_l = instance_l.main_instance.get().sub_instances;
+				// remove itself
+				for(auto it_l = sub_instances_l.begin() ; it_l != sub_instances_l.end() ; ++it_l )
 				{
-					sub_instances_l.erase(it_l);
-					break;
+					if(it_l->handle() == idx_p)
+					{
+						sub_instances_l.erase(it_l);
+						break;
+					}
 				}
 			}
 		}
@@ -362,12 +367,14 @@ namespace godot
 
 	void EntityDrawer::set_new_pos(int idx_p, Vector2 const &pos_p)
 	{
-		_newPos[idx_p] = pos_p;
+		size_t const &pos_idx_l = _instances.get(idx_p).pos_idx.get().idx;
+		_newPos[pos_idx_l] = pos_p;
 	}
 
 	Vector2 const & EntityDrawer::get_old_pos(int idx_p)
 	{
-		return _oldPos[idx_p];
+		size_t const &pos_idx_l = _instances.get(idx_p).pos_idx.get().idx;
+		return _oldPos[pos_idx_l];
 	}
 
 	void EntityDrawer::update_pos()
