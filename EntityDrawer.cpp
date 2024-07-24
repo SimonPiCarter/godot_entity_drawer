@@ -271,8 +271,6 @@ namespace godot
 			handler_l.type = new_type;
 			handler_l.count = 0;
 		}
-
-		// instance_l.dir_handler.get().direction = direction_p;
 	}
 
 	void EntityDrawer::add_direction_handler(int idx_p, bool has_up_down_p)
