@@ -194,7 +194,6 @@ namespace godot
 	void EntityDrawer::free_instance(int idx_p, bool skip_main_free_p)
 	{
 		EntityInstance &instance_l = _instances.get(idx_p);
-
 		// free all components that cannot be inherited
 		if(instance_l.animation.is_valid())
 		{
@@ -348,6 +347,8 @@ namespace godot
 		EntityInstance &instance_l = _instances.get(idx_p);
 		if(instance_l.alt_info.is_valid())
 		{
+			if(instance_l.alt_info.get().rid.is_valid())
+				RenderingServer::get_singleton()->canvas_item_clear(instance_l.alt_info.get().rid);
 			alt_infos.free_instance(instance_l.alt_info);
 		}
 	}
