@@ -48,6 +48,37 @@ namespace godot
 		anim_p.names[DirectionHandler::RIGHT] = "right_"+base_anim_p;
 	}
 
+	int get_direction(Vector2 const &dir_p, bool has_up_down_p)
+	{
+		int type_l = DirectionHandler::NONE;
+		if(std::abs(dir_p.x) > 0.01 || std::abs(dir_p.y) > 0.01)
+		{
+			if(std::abs(dir_p.x) > std::abs(dir_p.y) || !has_up_down_p)
+			{
+				if(dir_p.x > 0)
+				{
+					type_l = DirectionHandler::RIGHT;
+				}
+				else
+				{
+					type_l = DirectionHandler::LEFT;
+				}
+			}
+			else
+			{
+				if(dir_p.y > 0)
+				{
+					type_l = DirectionHandler::DOWN;
+				}
+				else
+				{
+					type_l = DirectionHandler::UP;
+				}
+			}
+		}
+		return type_l;
+	}
+
 	EntityDrawer::~EntityDrawer()
 	{
 		_instances.for_each([&](EntityInstance &, size_t idx_p) {
@@ -233,7 +264,15 @@ namespace godot
 		{
 			return;
 		}
-		instance_l.dir_handler.get().direction = direction_p;
+		DirectionHandler &handler_l = instance_l.dir_handler.get();
+		int new_type = get_direction(direction_p, handler_l.has_up_down);
+		if(new_type != DirectionHandler::NONE)
+		{
+			handler_l.type = new_type;
+			handler_l.count = 0;
+		}
+
+		// instance_l.dir_handler.get().direction = direction_p;
 	}
 
 	void EntityDrawer::add_direction_handler(int idx_p, bool has_up_down_p)
@@ -334,6 +373,28 @@ namespace godot
 		instance_l.animation.get().frame_idx = 0;
 		instance_l.animation.get().start = _elapsedAllTime;
 		instance_l.animation.get().one_shot = false;
+	}
+
+	void EntityDrawer::set_proritary_animation(int idx_p, StringName const &current_animation_p, StringName const &next_animation_p)
+	{
+		EntityInstance &instance_l = _instances.get(idx_p);
+		if(!instance_l.animation.is_valid())
+		{
+			return;
+		}
+		/// IMPORTANT this has to be done before next_animation = next_animation_p because
+		/// current_animation_p is a reference to old next_animation therefore updating it break
+		/// the value
+		if(instance_l.dir_animation.is_valid())
+		{
+			init_animation(instance_l.dir_animation.get(), current_animation_p);
+		}
+		instance_l.animation.get().current_animation = current_animation_p;
+		instance_l.animation.get().next_animation = next_animation_p;
+		instance_l.animation.get().frame_idx = 0;
+		instance_l.animation.get().start = _elapsedAllTime;
+		instance_l.animation.get().one_shot = false;
+		instance_l.animation.get().has_priority = true;
 	}
 
 	void EntityDrawer::set_animation_one_shot(int idx_p, StringName const &current_animation_p)
@@ -541,7 +602,8 @@ namespace godot
 
 		// forced directionl anim
 		if(instance_p.dir_animation.is_valid()
-		&& instance_p.dir_animation.get().base_name != StringName(""))
+		&& instance_p.dir_animation.get().base_name != StringName("")
+		&& instance_p.animation.get().has_priority)
 		{
 			return instance_p.dir_animation.get().names[type_l];
 		}
@@ -551,6 +613,12 @@ namespace godot
 		{
 			if(handler_l.idle)
 			{
+				// non-forced directionl anim
+				if(instance_p.dir_animation.is_valid()
+				&& instance_p.dir_animation.get().base_name != StringName(""))
+				{
+					return instance_p.dir_animation.get().names[type_l];
+				}
 				return instance_p.dyn_animation.get().idle.names[type_l];
 			}
 			return instance_p.dyn_animation.get().moving.names[type_l];
@@ -633,36 +701,11 @@ namespace godot
 	{
 		dir_handlers.for_each([&](DirectionHandler &handler_p) {
 			Vector2 dir_l = handler_p.direction;
-			int new_type = DirectionHandler::NONE;
 			if(dir_l.length_squared() < 0.1)
 			{
 				dir_l = _newPos[handler_p.pos_idx] - _oldPos[handler_p.pos_idx];
 			}
-			if(std::abs(dir_l.x) > 0.01 || std::abs(dir_l.y) > 0.01)
-			{
-				if(std::abs(dir_l.x) > std::abs(dir_l.y) || !handler_p.has_up_down)
-				{
-					if(dir_l.x > 0)
-					{
-						new_type = DirectionHandler::RIGHT;
-					}
-					else
-					{
-						new_type = DirectionHandler::LEFT;
-					}
-				}
-				else
-				{
-					if(dir_l.y > 0)
-					{
-						new_type = DirectionHandler::DOWN;
-					}
-					else
-					{
-						new_type = DirectionHandler::UP;
-					}
-				}
-			}
+			int new_type = get_direction(dir_l, handler_p.has_up_down);
 			if(new_type != DirectionHandler::NONE)
 			{
 				handler_p.count_idle = 0;
@@ -712,6 +755,7 @@ namespace godot
 		ClassDB::bind_method(D_METHOD("update_pos"), &EntityDrawer::update_pos);
 
 		ClassDB::bind_method(D_METHOD("set_animation", "instance", "current_animation", "next_animation"), &EntityDrawer::set_animation);
+		ClassDB::bind_method(D_METHOD("set_proritary_animation", "instance", "current_animation", "next_animation"), &EntityDrawer::set_proritary_animation);
 		ClassDB::bind_method(D_METHOD("set_animation_one_shot", "instance", "current_animation"), &EntityDrawer::set_animation_one_shot);
 		ClassDB::bind_method(D_METHOD("set_direction", "instance", "direction"), &EntityDrawer::set_direction);
 		ClassDB::bind_method(D_METHOD("add_direction_handler", "instance", "has_up_down"), &EntityDrawer::add_direction_handler);

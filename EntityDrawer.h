@@ -40,6 +40,8 @@ struct AnimationInstance
 	bool one_shot = false;
 
 	RenderingInfo info;
+	/// @brief has priority on dynamic anim (of false will only be displayed if idle)
+	bool has_priority = false;
 };
 
 struct DirectionalAnimation
@@ -143,6 +145,7 @@ public:
 
 	// animation getters/setters
 	void set_animation(int idx_p, StringName const &current_animation_p, StringName const &next_animation_p);
+	void set_proritary_animation(int idx_p, StringName const &current_animation_p, StringName const &next_animation_p);
 	void set_animation_one_shot(int idx_p, StringName const &current_animation_p);
 	StringName const & get_animation(int idx_p) const;
 
