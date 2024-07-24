@@ -156,6 +156,7 @@ public:
 
 	// shader handling
 	Ref<ShaderMaterial> get_shader_material(int idx_p);
+	void set_shader_bool_param(int idx_p, String const &param_p, bool value_p);
 	void set_shader_bool_params(String const &param_p, TypedArray<bool> const &values_p);
 	void set_shader_bool_params_from_indexes(String const &param_p, TypedArray<int> const &indexes_p, bool value_indexes_p);
 	void set_all_shader_bool_params_from_indexes(String const &param_p, TypedArray<int> const &indexes_p, bool value_indexes_p, bool value_others_p);

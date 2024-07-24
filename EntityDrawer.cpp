@@ -453,6 +453,16 @@ namespace godot
 		return instance_l.animation.get().info.material;
 	}
 
+	void EntityDrawer::set_shader_bool_param(int idx_p, String const &param_p, bool value_p)
+	{
+		EntityInstance &instance_l = _instances.get(idx_p);
+		if(instance_l.animation.is_valid()
+		&& instance_l.animation.get().info.material.is_valid())
+		{
+			instance_l.animation.get().info.material->set_shader_parameter(param_p, value_p);
+		}
+	}
+
 	void EntityDrawer::set_shader_bool_params(String const &param_p, TypedArray<bool> const &values_p)
 	{
 		_instances.for_each([&](EntityInstance & instance_l, size_t idx_p) {
@@ -762,6 +772,7 @@ namespace godot
 		ClassDB::bind_method(D_METHOD("set_new_pos", "instance", "pos"), &EntityDrawer::set_new_pos);
 		ClassDB::bind_method(D_METHOD("get_old_pos", "instance"), &EntityDrawer::get_old_pos);
 		ClassDB::bind_method(D_METHOD("get_shader_material", "instance"), &EntityDrawer::get_shader_material);
+		ClassDB::bind_method(D_METHOD("set_shader_bool_param", "idx", "param", "value"), &EntityDrawer::set_shader_bool_param);
 		ClassDB::bind_method(D_METHOD("set_shader_bool_params", "param", "values"), &EntityDrawer::set_shader_bool_params);
 		ClassDB::bind_method(D_METHOD("set_shader_bool_params_from_indexes", "param", "indexes", "value_index"), &EntityDrawer::set_shader_bool_params_from_indexes);
 		ClassDB::bind_method(D_METHOD("set_all_shader_bool_params_from_indexes", "param", "indexes", "value_index", "value_other"), &EntityDrawer::set_all_shader_bool_params_from_indexes);
