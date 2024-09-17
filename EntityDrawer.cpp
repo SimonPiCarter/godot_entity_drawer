@@ -708,6 +708,7 @@ namespace godot
 
 	void EntityDrawer::_process(double delta_p)
 	{
+		std::lock_guard<std::mutex> lock_l(_mutex);
 
 		_elapsedTime += delta_p;
 		_elapsedAllTime += delta_p;
@@ -751,7 +752,6 @@ namespace godot
 				handler_p.idle = true;
 			}
 		});
-	}
 
 		queue_redraw();
 	}

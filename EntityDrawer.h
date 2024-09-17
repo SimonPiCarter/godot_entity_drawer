@@ -7,6 +7,7 @@
 #include <godot_cpp/classes/sprite_frames.hpp>
 
 #include <array>
+#include <mutex>
 
 #include "smart_list/smart_list.h"
 #include "EntityPayload.h"
@@ -194,6 +195,7 @@ public:
 	// payload setup (free old one)
 	void setup_payload(AbstractEntityPayload * payload_hanlder_p);
 
+	std::mutex _mutex;
 private:
 	Ref<Shader> _shader;
 
