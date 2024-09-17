@@ -169,7 +169,6 @@ public:
 	// godot routines
 	void _ready() override;
 	void _draw() override;
-	void _physics_process(double delta_p) override;
 	void _process(double delta_p) override;
 
 	// Will be called by Godot when the class is registered

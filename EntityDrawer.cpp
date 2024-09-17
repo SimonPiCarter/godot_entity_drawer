@@ -706,8 +706,12 @@ namespace godot
 		});
 	}
 
-	void EntityDrawer::_physics_process(double delta_p)
+	void EntityDrawer::_process(double delta_p)
 	{
+
+		_elapsedTime += delta_p;
+		_elapsedAllTime += delta_p;
+
 		dir_handlers.for_each([&](DirectionHandler &handler_p) {
 			Vector2 dir_l = handler_p.direction;
 			if(dir_l.length_squared() < 0.1)
@@ -749,10 +753,6 @@ namespace godot
 		});
 	}
 
-	void EntityDrawer::_process(double delta_p)
-	{
-		_elapsedTime += delta_p;
-		_elapsedAllTime += delta_p;
 		queue_redraw();
 	}
 
