@@ -133,7 +133,7 @@ public:
 	void free_instance(int idx_p, bool skip_main_free_p=false);
 
 	// direction handling
-	void set_direction(int idx_p, Vector2 const &direction_p);
+	void set_direction(int idx_p, Vector2 const &direction_p, bool just_looking_p);
 	void add_direction_handler(int idx_p, bool has_up_down_p);
 	void remove_direction_handler(int idx_p);
 
@@ -147,7 +147,7 @@ public:
 	// animation getters/setters
 	void set_animation(int idx_p, StringName const &current_animation_p, StringName const &next_animation_p);
 	void set_proritary_animation(int idx_p, StringName const &current_animation_p, StringName const &next_animation_p);
-	void set_animation_one_shot(int idx_p, StringName const &current_animation_p);
+	void set_animation_one_shot(int idx_p, StringName const &current_animation_p, bool priority_p);
 	StringName const & get_animation(int idx_p) const;
 
 	// position handling
@@ -195,6 +195,7 @@ public:
 	// payload setup (free old one)
 	void setup_payload(AbstractEntityPayload * payload_hanlder_p);
 
+	// mutex used to lock during display to avoid syncing error while rendering
 	std::mutex _mutex;
 private:
 	Ref<Shader> _shader;
@@ -234,6 +235,9 @@ private:
 	AbstractEntityPayload * _payload_handler = new NoOpEntityPayload();
 
 	double const _scale = 1.;
+
+	/// @brief internal mutex lock when modifying smart lists
+	mutable std::mutex _internal_mutex;
 };
 
 }

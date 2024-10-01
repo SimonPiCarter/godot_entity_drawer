@@ -51,7 +51,7 @@ namespace godot
 	int get_direction(Vector2 const &dir_p, bool has_up_down_p)
 	{
 		int type_l = DirectionHandler::NONE;
-		if(std::abs(dir_p.x) > 0.01 || std::abs(dir_p.y) > 0.01)
+		if(std::abs(dir_p.x) > 0.0001 || std::abs(dir_p.y) > 0.0001)
 		{
 			if(std::abs(dir_p.x) > std::abs(dir_p.y) || !has_up_down_p)
 			{
@@ -119,6 +119,8 @@ namespace godot
 	int EntityDrawer::add_instance(Vector2 const &pos_p, Vector2 const &offset_p, Ref<SpriteFrames> const & animation_p,
 		StringName const &current_animation_p, StringName const &next_animation_p, bool one_shot_p, bool in_front_p)
 	{
+		std::lock_guard<std::mutex> lock_l(_internal_mutex);
+
 		EntityInstance entity_l;
 
 		// animation
@@ -155,6 +157,8 @@ namespace godot
 					StringName const &current_animation_p, StringName const &next_animation_p,
 					bool one_shot_p, bool in_front_p, bool use_directions_p)
 	{
+		std::lock_guard<std::mutex> lock_l(_internal_mutex);
+
 		if(!_instances.is_valid(idx_ref_p))
 		{
 			return -1;
@@ -193,6 +197,12 @@ namespace godot
 
 	void EntityDrawer::free_instance(int idx_p, bool skip_main_free_p)
 	{
+		std::lock_guard<std::mutex> *lock_l = nullptr;
+		if(!skip_main_free_p)
+		{
+			lock_l = new std::lock_guard<std::mutex>(_internal_mutex);
+		};
+
 		EntityInstance &instance_l = _instances.get(idx_p);
 		// free all components that cannot be inherited
 		if(instance_l.animation.is_valid())
@@ -254,16 +264,28 @@ namespace godot
 		// free payload
 		_payload_handler->free_payload(idx_p);
 		_instances.free_instance(idx_p);
+
+		delete lock_l;
 	}
 
-	void EntityDrawer::set_direction(int idx_p, Vector2 const &direction_p)
+	void EntityDrawer::set_direction(int idx_p, Vector2 const &direction_p, bool just_looking_p)
 	{
+		std::lock_guard<std::mutex> lock_l(_internal_mutex);
+
 		EntityInstance &instance_l = _instances.get(idx_p);
 		if(!instance_l.dir_handler.is_valid())
 		{
 			return;
 		}
 		DirectionHandler &handler_l = instance_l.dir_handler.get();
+		if(just_looking_p)
+		{
+			handler_l.direction = Vector2();
+		}
+		else
+		{
+			handler_l.direction = direction_p;
+		}
 		int new_type = get_direction(direction_p, handler_l.has_up_down);
 		if(new_type != DirectionHandler::NONE)
 		{
@@ -274,6 +296,8 @@ namespace godot
 
 	void EntityDrawer::add_direction_handler(int idx_p, bool has_up_down_p)
 	{
+		std::lock_guard<std::mutex> lock_l(_internal_mutex);
+
 		EntityInstance &instance_l = _instances.get(idx_p);
 		if(instance_l.dir_handler.is_valid()
 		|| !instance_l.animation.is_valid())
@@ -293,6 +317,8 @@ namespace godot
 
 	void EntityDrawer::remove_direction_handler(int idx_p)
 	{
+		std::lock_guard<std::mutex> lock_l(_internal_mutex);
+
 		EntityInstance &instance_l = _instances.get(idx_p);
 		if(instance_l.dir_handler.is_valid())
 		{
@@ -306,6 +332,8 @@ namespace godot
 
 	void EntityDrawer::add_dynamic_animation(int idx_p, StringName const &idle_animation_p, StringName const &moving_animation_p)
 	{
+		std::lock_guard<std::mutex> lock_l(_internal_mutex);
+
 		EntityInstance &instance_l = _instances.get(idx_p);
 		if(instance_l.dyn_animation.is_valid())
 		{
@@ -319,6 +347,8 @@ namespace godot
 
 	void EntityDrawer::add_pickable(int idx_p)
 	{
+		std::lock_guard<std::mutex> lock_l(_internal_mutex);
+
 		EntityInstance &instance_l = _instances.get(idx_p);
 		if(instance_l.alt_info.is_valid())
 		{
@@ -344,6 +374,8 @@ namespace godot
 
 	void EntityDrawer::remove_pickable(int idx_p)
 	{
+		std::lock_guard<std::mutex> lock_l(_internal_mutex);
+
 		EntityInstance &instance_l = _instances.get(idx_p);
 		if(instance_l.alt_info.is_valid())
 		{
@@ -355,6 +387,8 @@ namespace godot
 
 	void EntityDrawer::set_animation(int idx_p, StringName const &current_animation_p, StringName const &next_animation_p)
 	{
+		std::lock_guard<std::mutex> lock_l(_internal_mutex);
+
 		EntityInstance &instance_l = _instances.get(idx_p);
 		if(!instance_l.animation.is_valid())
 		{
@@ -376,6 +410,8 @@ namespace godot
 
 	void EntityDrawer::set_proritary_animation(int idx_p, StringName const &current_animation_p, StringName const &next_animation_p)
 	{
+		std::lock_guard<std::mutex> lock_l(_internal_mutex);
+
 		EntityInstance &instance_l = _instances.get(idx_p);
 		if(!instance_l.animation.is_valid())
 		{
@@ -396,8 +432,10 @@ namespace godot
 		instance_l.animation.get().has_priority = true;
 	}
 
-	void EntityDrawer::set_animation_one_shot(int idx_p, StringName const &current_animation_p)
+	void EntityDrawer::set_animation_one_shot(int idx_p, StringName const &current_animation_p, bool priority_p)
 	{
+		std::lock_guard<std::mutex> lock_l(_internal_mutex);
+
 		EntityInstance &instance_l = _instances.get(idx_p);
 		if(!instance_l.animation.is_valid())
 		{
@@ -407,6 +445,7 @@ namespace godot
 		instance_l.animation.get().frame_idx = 0;
 		instance_l.animation.get().start = _elapsedAllTime;
 		instance_l.animation.get().one_shot = true;
+		instance_l.animation.get().has_priority = priority_p;
 
 		if(instance_l.dir_animation.is_valid())
 		{
@@ -416,6 +455,8 @@ namespace godot
 
 	StringName const & EntityDrawer::get_animation(int idx_p) const
 	{
+		std::lock_guard<std::mutex> lock_l(_internal_mutex);
+
 		EntityInstance const &instance_l = _instances.get(idx_p);
 		if(!instance_l.animation.is_valid())
 		{
@@ -439,6 +480,8 @@ namespace godot
 
 	void EntityDrawer::update_pos()
 	{
+		std::lock_guard<std::mutex> lock_l(_internal_mutex);
+
 		_elapsedTime = 0.;
 		// swap positions
 		std::swap(_oldPos, _newPos);
@@ -637,9 +680,10 @@ namespace godot
 
 	void EntityDrawer::_draw()
 	{
+		std::lock_guard<std::mutex> lock_l(_mutex);
+
 		_instances.for_each([&](EntityInstance &instance_p, size_t idx_p) {
 			StringName cur_anim_l = get_anim(instance_p);
-			std::string test_l(cur_anim_l.substr(0,-1).utf8().get_data());
 			if(!instance_p.animation.is_valid())
 			{
 				return;
@@ -715,7 +759,7 @@ namespace godot
 
 		dir_handlers.for_each([&](DirectionHandler &handler_p) {
 			Vector2 dir_l = handler_p.direction;
-			if(dir_l.length_squared() < 0.1)
+			if(dir_l.length_squared() < 0.0001)
 			{
 				dir_l = _newPos[handler_p.pos_idx] - _oldPos[handler_p.pos_idx];
 			}
@@ -765,8 +809,8 @@ namespace godot
 
 		ClassDB::bind_method(D_METHOD("set_animation", "instance", "current_animation", "next_animation"), &EntityDrawer::set_animation);
 		ClassDB::bind_method(D_METHOD("set_proritary_animation", "instance", "current_animation", "next_animation"), &EntityDrawer::set_proritary_animation);
-		ClassDB::bind_method(D_METHOD("set_animation_one_shot", "instance", "current_animation"), &EntityDrawer::set_animation_one_shot);
-		ClassDB::bind_method(D_METHOD("set_direction", "instance", "direction"), &EntityDrawer::set_direction);
+		ClassDB::bind_method(D_METHOD("set_animation_one_shot", "instance", "current_animation", "priority"), &EntityDrawer::set_animation_one_shot);
+		ClassDB::bind_method(D_METHOD("set_direction", "instance", "direction", "just_looking"), &EntityDrawer::set_direction);
 		ClassDB::bind_method(D_METHOD("add_direction_handler", "instance", "has_up_down"), &EntityDrawer::add_direction_handler);
 		ClassDB::bind_method(D_METHOD("remove_direction_handler", "instance"), &EntityDrawer::remove_direction_handler);
 		ClassDB::bind_method(D_METHOD("add_dynamic_animation", "instance", "idle_animation", "moving_animation"), &EntityDrawer::add_dynamic_animation);
