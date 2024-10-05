@@ -611,7 +611,31 @@ namespace godot
 		double scale_l = _texture_catcher->get_scale_viewport();
 		Vector2 scale_pos_l = pos_p / scale_l;
 
-		return idx_from_color(safe_color(scale_pos_l.x, scale_pos_l.y, _texture_catcher->get_texture()->get_image()));
+		Ref<Image> image_l = _texture_catcher->get_texture()->get_image();
+		int idx_l = idx_from_color(safe_color(scale_pos_l.x, scale_pos_l.y, image_l));
+		if(idx_l >= 0)
+		{
+			return idx_l;
+		}
+		for(size_t range_l = 1; range_l < 3; ++ range_l)
+		{
+			for(size_t x = 0 ; x <= range_l ; ++x)
+			{
+				for(size_t y = 0 ; y <= range_l ; ++y)
+				{
+					if(x+y == 0 || x+y > range_l) { continue; }
+					idx_l = idx_from_color(safe_color(scale_pos_l.x+x, scale_pos_l.y+y, image_l));
+					if(idx_l >= 0) { return idx_l; }
+					idx_l = idx_from_color(safe_color(scale_pos_l.x-x, scale_pos_l.y+y, image_l));
+					if(idx_l >= 0) { return idx_l; }
+					idx_l = idx_from_color(safe_color(scale_pos_l.x-x, scale_pos_l.y-y, image_l));
+					if(idx_l >= 0) { return idx_l; }
+					idx_l = idx_from_color(safe_color(scale_pos_l.x+x, scale_pos_l.y-y, image_l));
+					if(idx_l >= 0) { return idx_l; }
+				}
+			}
+		}
+		return -1;
 	}
 
 	void EntityDrawer::_ready()
@@ -785,13 +809,13 @@ namespace godot
 				handler_p.count_type = DirectionHandler::NONE;
 			}
 
-			if(handler_p.count > 1
+			if(handler_p.count > 5
 			&& handler_p.count_type != DirectionHandler::NONE
 			&& handler_p.count_type != handler_p.type)
 			{
 				handler_p.type = handler_p.count_type;
 			}
-			if(handler_p.count_idle > 1)
+			if(handler_p.count_idle > 5)
 			{
 				handler_p.idle = true;
 			}
