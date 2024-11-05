@@ -9,6 +9,7 @@
 /// of the payload
 class AbstractEntityPayload {
 public:
+	virtual ~AbstractEntityPayload() {}
 	virtual void add_payload() = 0;
 	virtual void free_payload(int idx_p) = 0;
 };

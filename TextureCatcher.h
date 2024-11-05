@@ -1,13 +1,25 @@
 #pragma once
 
-#include <godot_cpp/godot.hpp>
-#include <godot_cpp/classes/camera2d.hpp>
-#include <godot_cpp/classes/canvas_layer.hpp>
-#include <godot_cpp/classes/node2d.hpp>
-#include <godot_cpp/classes/sprite2d.hpp>
-#include <godot_cpp/classes/sub_viewport.hpp>
-#include <godot_cpp/classes/texture_rect.hpp>
-#include <godot_cpp/classes/viewport_texture.hpp>
+#ifdef GD_EXTENSION_GODOCTOPUS
+	#include <godot_cpp/godot.hpp>
+	#include <godot_cpp/classes/camera2d.hpp>
+	#include <godot_cpp/classes/canvas_layer.hpp>
+	#include <godot_cpp/classes/node2d.hpp>
+	#include <godot_cpp/classes/sprite2d.hpp>
+	#include <godot_cpp/classes/sub_viewport.hpp>
+	#include <godot_cpp/classes/texture_rect.hpp>
+	#include <godot_cpp/classes/viewport_texture.hpp>
+#else
+	#include "scene/main/canvas_layer.h"
+	#include "scene/main/viewport.h"
+	#include "scene/2d/node_2d.h"
+	#include "scene/gui/texture_rect.h"
+	#include "scene/2d/camera_2d.h"
+	#include "scene/2d/sprite_2d.h"
+	#include "scene/resources/atlas_texture.h"
+	#include "scene/resources/material.h"
+	#include "scene/resources/sprite_frames.h"
+#endif
 
 #include <string>
 #include <unordered_map>
@@ -22,10 +34,10 @@ class TextureCatcher : public Node2D {
 
 public:
 	// godot routines
-	void _ready() override;
+	void _ready();
 	// void _draw() override;
 	// void _physics_process(double delta_p) override;
-	void _process(double delta_p) override;
+	void _process(double delta_p);
 
 	void set_debug(bool debug_p) { _debug_canvas->set_visible(debug_p); }
 	bool is_debug() const { return _debug_canvas->is_visible(); }
@@ -46,6 +58,8 @@ public:
 	NodePath const & get_ref_camera() const { return _ref_camera_path; }
 	void set_ref_camera(NodePath const &ref_camera) { _ref_camera_path = ref_camera; }
 
+protected:
+	void _notification(int p_notification);
 private:
 	double _scale_viewport = 2.;
 	Camera2D * _ref_camera = nullptr;

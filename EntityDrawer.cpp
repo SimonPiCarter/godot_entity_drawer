@@ -1,10 +1,16 @@
 
 #include "EntityDrawer.h"
-#include <godot_cpp/variant/utility_functions.hpp>
-#include <godot_cpp/classes/rendering_server.hpp>
 
 #include <algorithm>
 #include "TextureCatcher.h"
+
+
+#ifdef GD_EXTENSION_GODOCTOPUS
+	#include <godot_cpp/variant/utility_functions.hpp>
+	#include <godot_cpp/classes/rendering_server.hpp>
+#else
+	#include "servers/rendering_server.h"
+#endif
 
 namespace godot
 {
@@ -637,6 +643,21 @@ namespace godot
 		}
 		return -1;
 	}
+	void EntityDrawer::_notification(int p_notification)
+	{
+		switch (p_notification) {
+			case NOTIFICATION_PROCESS: {
+				_process(get_process_delta_time());
+			} break;
+			case NOTIFICATION_DRAW: {
+				_draw();
+			} break;
+			case NOTIFICATION_READY: {
+				_ready();
+				set_process(true);
+			} break;
+		}
+	}
 
 	void EntityDrawer::_ready()
 	{
@@ -873,7 +894,7 @@ namespace godot
 	{
 		if(_instances.size() > 0)
 		{
-			throw std::logic_error("cannot setup payload with instances.");
+			return;
 		}
 		delete _payload_handler;
 		_payload_handler = payload_hanlder_p;

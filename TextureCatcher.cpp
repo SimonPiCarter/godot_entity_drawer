@@ -1,16 +1,34 @@
 #include "TextureCatcher.h"
-#include <godot_cpp/variant/utility_functions.hpp>
 
-#include <godot_cpp/classes/color_rect.hpp>
-#include <godot_cpp/classes/window.hpp>
+#ifdef GD_EXTENSION_GODOCTOPUS
+	#include <godot_cpp/classes/color_rect.hpp>
+	#include <godot_cpp/classes/window.hpp>
+#else
+	#include <scene/gui/color_rect.h>
+	#include <scene/main/window.h>
+#endif
+
 
 namespace godot {
+
+void TextureCatcher::_notification(int p_notification)
+{
+		switch (p_notification) {
+			case NOTIFICATION_PROCESS: {
+				_process(get_process_delta_time());
+			} break;
+			case NOTIFICATION_READY: {
+				_ready();
+				set_process(true);
+			} break;
+		}
+}
 
 void TextureCatcher::_ready()
 {
 	set_texture_filter(CanvasItem::TextureFilter::TEXTURE_FILTER_NEAREST);
 	if(!_ref_camera_path.is_empty())
-		_ref_camera = get_node<Camera2D>(_ref_camera_path);
+		_ref_camera = (Camera2D*)get_node(_ref_camera_path);
 	// set up basic tree
 	// - Subviewport : viewport used to render the picking texture
 	//   - CanvasLayer

@@ -1,8 +1,13 @@
 #pragma once
 
-#include <godot_cpp/godot.hpp>
-#include <godot_cpp/classes/node.hpp>
-#include <godot_cpp/classes/sprite_frames.hpp>
+#ifdef GD_EXTENSION_GODOCTOPUS
+	#include <godot_cpp/godot.hpp>
+	#include <godot_cpp/classes/node.hpp>
+	#include <godot_cpp/classes/sprite_frames.hpp>
+#else
+	#include "scene/main/node.h"
+	#include "scene/resources/sprite_frames.h"
+#endif
 
 #include <string>
 #include <unordered_map>

@@ -1,10 +1,17 @@
 #pragma once
 
-#include <godot_cpp/godot.hpp>
-#include <godot_cpp/classes/node2d.hpp>
-#include <godot_cpp/classes/atlas_texture.hpp>
-#include <godot_cpp/classes/shader_material.hpp>
-#include <godot_cpp/classes/sprite_frames.hpp>
+#ifdef GD_EXTENSION_GODOCTOPUS
+	#include <godot_cpp/godot.hpp>
+	#include <godot_cpp/classes/node2d.hpp>
+	#include <godot_cpp/classes/atlas_texture.hpp>
+	#include <godot_cpp/classes/shader_material.hpp>
+	#include <godot_cpp/classes/sprite_frames.hpp>
+#else
+	#include "scene/2d/node_2d.h"
+	#include "scene/resources/atlas_texture.h"
+	#include "scene/resources/material.h"
+	#include "scene/resources/sprite_frames.h"
+#endif
 
 #include <array>
 #include <mutex>
@@ -168,9 +175,9 @@ public:
 	int index_from_texture(Vector2 const &pos_p) const;
 
 	// godot routines
-	void _ready() override;
-	void _draw() override;
-	void _process(double delta_p) override;
+	void _ready();
+	void _draw();
+	void _process(double delta_p);
 
 	// Will be called by Godot when the class is registered
 	// Use this to add properties to your class
@@ -197,6 +204,8 @@ public:
 
 	// mutex used to lock during display to avoid syncing error while rendering
 	std::mutex _mutex;
+protected:
+	void _notification(int p_notification);
 private:
 	Ref<Shader> _shader;
 
