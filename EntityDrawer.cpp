@@ -12,6 +12,8 @@
 	#include "servers/rendering_server.h"
 #endif
 
+#define ENTITY_DRAWER_EPSILON 0.000000001
+
 namespace godot
 {
 	Vector3 color_from_idx(int idx_p)
@@ -57,7 +59,7 @@ namespace godot
 	int get_direction(Vector2 const &dir_p, bool has_up_down_p)
 	{
 		int type_l = DirectionHandler::NONE;
-		if(std::abs(dir_p.x) > 0.0001 || std::abs(dir_p.y) > 0.0001)
+		if(std::abs(dir_p.x) > ENTITY_DRAWER_EPSILON || std::abs(dir_p.y) > ENTITY_DRAWER_EPSILON)
 		{
 			if(std::abs(dir_p.x) > std::abs(dir_p.y) || !has_up_down_p)
 			{
@@ -649,12 +651,16 @@ namespace godot
 			case NOTIFICATION_PROCESS: {
 				_process(get_process_delta_time());
 			} break;
+			case NOTIFICATION_PHYSICS_PROCESS: {
+				_physics_process(get_physics_process_delta_time());
+			} break;
 			case NOTIFICATION_DRAW: {
 				_draw();
 			} break;
 			case NOTIFICATION_READY: {
 				_ready();
 				set_process(true);
+				set_physics_process(true);
 			} break;
 		}
 	}
@@ -802,9 +808,16 @@ namespace godot
 		_elapsedTime += delta_p;
 		_elapsedAllTime += delta_p;
 
+		queue_redraw();
+	}
+
+	void EntityDrawer::_physics_process(double delta_p)
+	{
+		std::lock_guard<std::mutex> lock_l(_mutex);
+
 		dir_handlers.for_each([&](DirectionHandler &handler_p) {
 			Vector2 dir_l = handler_p.direction;
-			if(dir_l.length_squared() < 0.0001)
+			if(dir_l.length_squared() < ENTITY_DRAWER_EPSILON)
 			{
 				dir_l = _newPos[handler_p.pos_idx] - _oldPos[handler_p.pos_idx];
 			}
@@ -841,8 +854,6 @@ namespace godot
 				handler_p.idle = true;
 			}
 		});
-
-		queue_redraw();
 	}
 
 	void EntityDrawer::_bind_methods()

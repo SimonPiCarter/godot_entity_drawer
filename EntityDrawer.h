@@ -178,6 +178,7 @@ public:
 	void _ready();
 	void _draw();
 	void _process(double delta_p);
+	void _physics_process(double delta_p);
 
 	// Will be called by Godot when the class is registered
 	// Use this to add properties to your class
