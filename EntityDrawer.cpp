@@ -176,7 +176,7 @@ namespace godot
 		// animation
 		entity_l.animation = animations.recycle_instance();
 		set_up_animation(entity_l.animation, _elapsedAllTime, _shader, get_canvas_item(), offset_p, animation_p, current_animation_p, next_animation_p, one_shot_p);
-		RenderingServer::get_singleton()->canvas_item_set_z_index(entity_l.animation.get().info.rid, in_front_p ? 1 : -1);
+		RenderingServer::get_singleton()->canvas_item_set_z_index(entity_l.animation.get().info.rid, in_front_p ? 2 : -1);
 
 		// copy reference for position and dir_handler
 		entity_l.pos_idx = _instances.get(idx_ref_p).pos_idx;
