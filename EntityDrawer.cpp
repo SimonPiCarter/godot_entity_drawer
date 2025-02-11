@@ -611,6 +611,11 @@ namespace godot
 
 	int EntityDrawer::index_from_texture(Vector2 const &pos_p) const
 	{
+		return index_from_texture_with_tolerance(pos_p, 0);
+	}
+
+	int EntityDrawer::index_from_texture_with_tolerance(Vector2 const &pos_p, int tolerance_p) const
+	{
 		if(!_texture_catcher)
 		{
 			return -1;
@@ -625,7 +630,7 @@ namespace godot
 		{
 			return idx_l;
 		}
-		for(size_t range_l = 1; range_l < 3; ++ range_l)
+		for(size_t range_l = 1; range_l < tolerance_p; ++ range_l)
 		{
 			for(size_t x = 0 ; x <= range_l ; ++x)
 			{
@@ -883,7 +888,8 @@ namespace godot
 
 		ClassDB::bind_method(D_METHOD("indexes_from_texture", "rect"), &EntityDrawer::indexes_from_texture);
 		ClassDB::bind_method(D_METHOD("index_array_from_texture", "rect"), &EntityDrawer::index_array_from_texture);
-		ClassDB::bind_method(D_METHOD("index_from_texture", "pos"), &EntityDrawer::index_from_texture);
+		ClassDB::bind_method(D_METHOD("index_from_texture", "position"), &EntityDrawer::index_from_texture);
+		ClassDB::bind_method(D_METHOD("index_from_texture_with_tolerance", "position", "tolerance"), &EntityDrawer::index_from_texture_with_tolerance);
 
 		// properties
 		ClassDB::bind_method(D_METHOD("get_scale_viewport"), &EntityDrawer::get_scale_viewport);

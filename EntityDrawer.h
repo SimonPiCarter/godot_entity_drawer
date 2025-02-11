@@ -173,6 +173,7 @@ public:
 	TypedArray<int> indexes_from_texture(Rect2 const &rect_p) const;
 	TypedArray<bool> index_array_from_texture(Rect2 const &rect_p) const;
 	int index_from_texture(Vector2 const &pos_p) const;
+	int index_from_texture_with_tolerance(Vector2 const &pos_p, int tolerance_p) const;
 
 	// godot routines
 	void _ready();
