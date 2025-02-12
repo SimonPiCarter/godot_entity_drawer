@@ -139,6 +139,9 @@ public:
 					bool one_shot_p, bool in_front_p, bool use_directions_p);
 	void free_instance(int idx_p, bool skip_main_free_p=false);
 
+	// update animation of the instance
+	void update_sprite_frames(int idx_p, Vector2 const &offset_p, Ref<SpriteFrames> const & animation_p);
+
 	// direction handling
 	void set_direction(int idx_p, Vector2 const &direction_p, bool just_looking_p);
 	void add_direction_handler(int idx_p, bool has_up_down_p);

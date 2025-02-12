@@ -276,6 +276,16 @@ namespace godot
 		delete lock_l;
 	}
 
+	void EntityDrawer::update_sprite_frames(int idx_p, Vector2 const &offset_p, Ref<SpriteFrames> const & animation_p)
+	{
+		std::lock_guard<std::mutex> lock_l(_internal_mutex);
+
+		EntityInstance &entity_l = _instances.get(idx_p);
+		AnimationInstance &animation_l = entity_l.animation.get();
+		animation_l.offset = offset_p;
+		animation_l.animation = animation_p;
+	}
+
 	void EntityDrawer::set_direction(int idx_p, Vector2 const &direction_p, bool just_looking_p)
 	{
 		std::lock_guard<std::mutex> lock_l(_internal_mutex);
@@ -866,6 +876,7 @@ namespace godot
 		ClassDB::bind_method(D_METHOD("add_instance", "position", "offset", "animation", "current_animation", "next_animation", "one_shot"), &EntityDrawer::add_instance);
 		ClassDB::bind_method(D_METHOD("add_sub_instance", "idx_ref", "offset", "animation", "current_animation", "next_animation", "one_shot", "in_front", "use_directions"), &EntityDrawer::add_sub_instance);
 		ClassDB::bind_method(D_METHOD("free_instance", "idx"), &EntityDrawer::free_instance);
+		ClassDB::bind_method(D_METHOD("update_sprite_frames", "idx", "offset", "animation"), &EntityDrawer::update_sprite_frames);
 		ClassDB::bind_method(D_METHOD("update_pos"), &EntityDrawer::update_pos);
 
 		ClassDB::bind_method(D_METHOD("set_animation", "instance", "current_animation", "next_animation"), &EntityDrawer::set_animation);
