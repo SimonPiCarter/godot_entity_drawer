@@ -873,7 +873,7 @@ namespace godot
 
 	void EntityDrawer::_bind_methods()
 	{
-		ClassDB::bind_method(D_METHOD("add_instance", "position", "offset", "animation", "current_animation", "next_animation", "one_shot"), &EntityDrawer::add_instance);
+		ClassDB::bind_method(D_METHOD("add_instance", "position", "offset", "animation", "current_animation", "next_animation", "one_shot", "in_front"), &EntityDrawer::add_instance);
 		ClassDB::bind_method(D_METHOD("add_sub_instance", "idx_ref", "offset", "animation", "current_animation", "next_animation", "one_shot", "in_front", "use_directions"), &EntityDrawer::add_sub_instance);
 		ClassDB::bind_method(D_METHOD("free_instance", "idx"), &EntityDrawer::free_instance);
 		ClassDB::bind_method(D_METHOD("update_sprite_frames", "idx", "offset", "animation"), &EntityDrawer::update_sprite_frames);
@@ -886,6 +886,8 @@ namespace godot
 		ClassDB::bind_method(D_METHOD("add_direction_handler", "instance", "has_up_down"), &EntityDrawer::add_direction_handler);
 		ClassDB::bind_method(D_METHOD("remove_direction_handler", "instance"), &EntityDrawer::remove_direction_handler);
 		ClassDB::bind_method(D_METHOD("add_dynamic_animation", "instance", "idle_animation", "moving_animation"), &EntityDrawer::add_dynamic_animation);
+		ClassDB::bind_method(D_METHOD("add_pickable", "instance"), &EntityDrawer::add_pickable);
+		ClassDB::bind_method(D_METHOD("remove_pickable", "instance"), &EntityDrawer::remove_pickable);
 		ClassDB::bind_method(D_METHOD("set_new_pos", "instance", "pos"), &EntityDrawer::set_new_pos);
 		ClassDB::bind_method(D_METHOD("get_old_pos", "instance"), &EntityDrawer::get_old_pos);
 		ClassDB::bind_method(D_METHOD("get_shader_material", "instance"), &EntityDrawer::get_shader_material);
