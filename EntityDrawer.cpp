@@ -580,7 +580,6 @@ namespace godot
 		TypedArray<bool> all_added_l = index_array_from_texture(rect_p);
 
 		TypedArray<int> indexes_l;
-		int idx_l = 0;
 		for(int idx_l = 0 ; idx_l < all_added_l.size() ; ++ idx_l)
 		{
 			if (all_added_l[idx_l])

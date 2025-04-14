@@ -38,6 +38,8 @@ public:
 		return _list.get(idx_p);
 	}
 
+	std::size_t size() const { return _list.size(); }
+
 private:
 	smart_list<T> _list;
 };
