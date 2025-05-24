@@ -62,7 +62,7 @@ namespace godot
 					get_window()->get_theme_default_font() ,
 					8*pos,
 					instance.str,
-					HORIZONTAL_ALIGNMENT_LEFT, -1, Font::DEFAULT_FONT_SIZE, 4,
+					HORIZONTAL_ALIGNMENT_LEFT, -1, Font::DEFAULT_FONT_SIZE * size_ratio, 4 * size_ratio,
 					Color(0,0,0,color.a)
 				);
 			}
@@ -70,14 +70,14 @@ namespace godot
 				get_window()->get_theme_default_font(),
 				8*pos,
 				instance.str,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, Font::DEFAULT_FONT_SIZE,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, Font::DEFAULT_FONT_SIZE * size_ratio,
 				color
 			);
 			if(instance.icon.is_valid())
 			{
 				draw_texture_rect(
 					instance.icon,
-					Rect2(8*pos + Vector2(instance.str.length()*icon_offset_x, icon_offset_y), Vector2(icone_size,icone_size)),
+					Rect2(8*pos + Vector2(instance.str.length()*icon_offset_x, icon_offset_y), size_ratio * Vector2(icon_size,icon_size)),
 					false,
 					Color(1,1,1,color.a)
 				);
@@ -93,6 +93,7 @@ namespace godot
 	void StringDrawer::_process(double delta)
 	{
 		elapsed_time += delta;
+		queue_redraw();
 	}
 
 	int StringDrawer::add_string_instance(StringName const &str, bool outline, bool floating, Vector2 const &pos,
@@ -139,10 +140,15 @@ namespace godot
 		ClassDB::bind_method(D_METHOD("set_icon_offset_y", "icon_offset_y"), &StringDrawer::set_icon_offset_y);
 		ClassDB::add_property("StringDrawer", PropertyInfo(Variant::FLOAT, "icon_offset_y"), "set_icon_offset_y", "get_icon_offset_y");
 
-		// icone_size
-		ClassDB::bind_method(D_METHOD("get_icone_size"), &StringDrawer::get_icone_size);
-		ClassDB::bind_method(D_METHOD("set_icone_size", "icone_size"), &StringDrawer::set_icone_size);
-		ClassDB::add_property("StringDrawer", PropertyInfo(Variant::FLOAT, "icone_size"), "set_icone_size", "get_icone_size");
+		// icon_size
+		ClassDB::bind_method(D_METHOD("get_icon_size"), &StringDrawer::get_icon_size);
+		ClassDB::bind_method(D_METHOD("set_icon_size", "icon_size"), &StringDrawer::set_icon_size);
+		ClassDB::add_property("StringDrawer", PropertyInfo(Variant::FLOAT, "icon_size"), "set_icon_size", "get_icon_size");
+
+		// size_ratio
+		ClassDB::bind_method(D_METHOD("get_size_ratio"), &StringDrawer::get_size_ratio);
+		ClassDB::bind_method(D_METHOD("set_size_ratio", "size_ratio"), &StringDrawer::set_size_ratio);
+		ClassDB::add_property("StringDrawer", PropertyInfo(Variant::FLOAT, "size_ratio"), "set_size_ratio", "get_size_ratio");
 
 	}
 

@@ -61,8 +61,10 @@ public:
 	void set_icon_offset_x(double d) { icon_offset_x = d; }
 	double get_icon_offset_y() const { return icon_offset_y; }
 	void set_icon_offset_y(double d) { icon_offset_y = d; }
-	double get_icone_size() const { return icone_size; }
-	void set_icone_size(double d) { icone_size = d; }
+	double get_icon_size() const { return icon_size; }
+	void set_icon_size(double d) { icon_size = d; }
+	double get_size_ratio() const { return size_ratio; }
+	void set_size_ratio(double d) { size_ratio = d; }
 
 protected:
 	// godot routine when used internally
@@ -85,7 +87,8 @@ private:
 	double fade_time = 0.25;
 	double icon_offset_x = 10.;
 	double icon_offset_y = -20.;
-	double icone_size = 28.;
+	double icon_size = 28.;
+	double size_ratio = 1.;
 };
 
 } // godot
