@@ -35,7 +35,44 @@ namespace godot
 
 	StringDrawer::~StringDrawer() {}
 
-	void StringDrawer::_ready() {}
+	void StringDrawer::_ready()
+	{
+		if(!_ref_camera_path.is_empty())
+			_ref_camera = (Camera2D*)get_node(_ref_camera_path);
+	}
+
+	Size2i get_size(Viewport const *viewport)
+	{
+		Window const * wi = dynamic_cast<Window const *>(viewport);
+		SubViewport const * sv = dynamic_cast<SubViewport const *>(viewport);
+		if(wi)
+		{
+			return wi->get_size();
+		}
+		if(sv)
+		{
+			return sv->get_size();
+		}
+		return Size2i();
+	}
+
+	Vector2 get_cam_top_left(Camera2D * camera)
+	{
+		Size2i viewport_size = get_size(camera->get_viewport());
+		auto cam_size = Vector2(viewport_size.x, viewport_size.y) / camera->get_zoom().x;
+		return camera->get_position() - cam_size / 2.;
+	}
+
+	Vector2 get_screen_pos(Camera2D * camera, Vector2 const &world_pos)
+	{
+		auto viewport_pos = (world_pos - get_cam_top_left(camera)) * camera->get_zoom().x;
+		auto window_size = DisplayServer::get_singleton()->window_get_size();
+		Size2i viewport_size = get_size(camera->get_viewport());
+		auto scale_size = Vector2(float(viewport_size.x) / window_size.x, float(viewport_size.y) / window_size.y);
+
+		auto screen_pos = viewport_pos / scale_size;
+		return screen_pos;
+	}
 
 	void StringDrawer::_draw()
 	{
@@ -56,11 +93,16 @@ namespace godot
 					ended_instances.push_back(idx);
 				}
 			}
+			// adjust from camera if available
+			if(_ref_camera)
+			{
+				pos = get_screen_pos(_ref_camera, pos);
+			}
 			if(instance.outline)
 			{
 				draw_string_outline(
 					get_window()->get_theme_default_font() ,
-					8*pos,
+					pos,
 					instance.str,
 					HORIZONTAL_ALIGNMENT_LEFT, -1, Font::DEFAULT_FONT_SIZE * size_ratio, 4 * size_ratio,
 					Color(0,0,0,color.a)
@@ -68,7 +110,7 @@ namespace godot
 			}
 			draw_string(
 				get_window()->get_theme_default_font(),
-				8*pos,
+				pos,
 				instance.str,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, Font::DEFAULT_FONT_SIZE * size_ratio,
 				color
@@ -77,7 +119,7 @@ namespace godot
 			{
 				draw_texture_rect(
 					instance.icon,
-					Rect2(8*pos + Vector2(instance.str.length()*icon_offset_x, icon_offset_y), size_ratio * Vector2(icon_size,icon_size)),
+					Rect2(pos + Vector2(instance.str.length()*icon_offset_x, icon_offset_y), size_ratio * Vector2(icon_size,icon_size)),
 					false,
 					Color(1,1,1,color.a)
 				);
@@ -109,6 +151,10 @@ namespace godot
 		ClassDB::bind_method(D_METHOD("add_string_instance", "str", "outline", "floating", "pos", "color", "icon"), &StringDrawer::add_string_instance);
 
 		ADD_GROUP("StringDrawer", "StringDrawer_");
+
+		ClassDB::bind_method(D_METHOD("get_ref_camera"), &StringDrawer::get_ref_camera);
+		ClassDB::bind_method(D_METHOD("set_ref_camera", "ref_camera"), &StringDrawer::set_ref_camera);
+		ClassDB::add_property("StringDrawer", PropertyInfo(Variant::NODE_PATH, "ref_camera", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Camera2D"), "set_ref_camera", "get_ref_camera");
 
 		// oscillation_factor
 		ClassDB::bind_method(D_METHOD("get_oscillation_factor"), &StringDrawer::get_oscillation_factor);

@@ -3,14 +3,10 @@
 #ifdef GD_EXTENSION_GODOCTOPUS
 	#include <godot_cpp/godot.hpp>
 	#include <godot_cpp/classes/node2d.hpp>
-	#include <godot_cpp/classes/atlas_texture.hpp>
-	#include <godot_cpp/classes/shader_material.hpp>
-	#include <godot_cpp/classes/sprite_frames.hpp>
+	#include <godot_cpp/classes/camera2d.hpp>
 #else
 	#include "scene/2d/node_2d.h"
-	#include "scene/resources/atlas_texture.h"
-	#include "scene/resources/material.h"
-	#include "scene/resources/sprite_frames.h"
+	#include "scene/2d/camera_2d.h"
 #endif
 
 #include "smart_list/smart_list.h"
@@ -40,6 +36,9 @@ public:
 	void _ready();
 	void _draw();
 	void _process(double delta_p);
+
+	NodePath const & get_ref_camera() const { return _ref_camera_path; }
+	void set_ref_camera(NodePath const &ref_camera) { _ref_camera_path = ref_camera; }
 
 	/// @brief Add a string instance
 	int add_string_instance(StringName const &str, bool outline, bool floating, Vector2 const &pos, Color const &color, Ref<Texture2D> const &texture);
@@ -71,6 +70,9 @@ protected:
 	void _notification(int p_notification);
 
 private:
+	NodePath _ref_camera_path;
+	Camera2D * _ref_camera = nullptr;
+
 	/// @brief mutex used to avoid data race between text manipulation and draw
 	std::mutex mutex;
 
